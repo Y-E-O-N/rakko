@@ -4,20 +4,21 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
-WorkingDirectory=/home/ubuntu/instagram-recorder/instagram-live-recorder
-Environment="PATH=/home/ubuntu/instagram-recorder/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/home/ubuntu/instagram-recorder/venv/bin/python main.py
+User=opc
+Group=opc
+WorkingDirectory=/home/opc/rakko/instagram-live-recorder
+Environment="PATH=/home/opc/rakko/insta_env/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/opc/rakko/.env
+ExecStart=/home/opc/rakko/insta_env/bin/python main.py
 Restart=always
 RestartSec=10
 
 # 로그 설정
-StandardOutput=append:/home/ubuntu/instagram-recorder/logs/live-recorder.log
-StandardError=append:/home/ubuntu/instagram-recorder/logs/live-recorder-error.log
+StandardOutput=journal
+StandardError=journal
 
 # 리소스 제한
-MemoryMax=1G
+MemoryMax=512M
 CPUQuota=50%
 
 [Install]
