@@ -1,0 +1,82 @@
+name: Deploy Instagram Live Recorder
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create directories
+        run: |
+          mkdir -p data/sessions
+          mkdir -p data/recordings
+          mkdir -p data/logs
+
+      - name: Generate config from template
+        run: |
+          cp config/settings.example.yaml config/settings.yaml
+          cp config/targets.example.json config/targets.json
+
+      - name: Validate environment variables
+        env:
+          IG_USERNAME: ${{ secrets.IG_USERNAME }}
+          IG_PASSWORD: ${{ secrets.IG_PASSWORD }}
+        run: |
+          if [ -z "$IG_USERNAME" ] || [ -z "$IG_PASSWORD" ]; then
+            echo "Error: Required secrets not set"
+            echo "Please set IG_USERNAME and IG_PASSWORD in repository secrets"
+            exit 1
+          fi
+          echo "Environment variables validated"
+
+      - name: Test configuration
+        env:
+          IG_USERNAME: ${{ secrets.IG_USERNAME }}
+          IG_PASSWORD: ${{ secrets.IG_PASSWORD }}
+          IG_TOTP_SECRET: ${{ secrets.IG_TOTP_SECRET }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          python -c "from src.utils.config import load_config; load_config()" && echo "Config OK"
+
+      # 실제 배포는 서버 환경에 맞게 수정 필요
+      # 예: SSH로 서버에 배포, Docker 이미지 빌드, etc.
+      - name: Deploy notification
+        if: success()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            curl -H "Content-Type: application/json" \
+              -d '{"content": "✅ Instagram Live Recorder 배포 완료\nCommit: ${{ github.sha }}"}' \
+              "$DISCORD_WEBHOOK_URL" || true
+          fi
