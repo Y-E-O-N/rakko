@@ -1,0 +1,162 @@
+# Instagram Story Saver Configuration
+# 이 파일을 settings.yaml로 복사하고 실제 값을 입력하세요
+#
+# 🔐 보안 권장사항:
+# - 직접 비밀번호를 입력하지 말고 환경 변수를 사용하세요
+# - ${ENV_VAR} 형식으로 환경 변수 참조 가능
+# - 자세한 내용: docs/SECURITY.md
+
+# Instagram 계정 설정
+instagram:
+  # 환경 변수 사용 권장: ${IG_USERNAME}
+  username: "${IG_USERNAME}"
+  password: "${IG_PASSWORD}"
+  # 2FA 사용 시 TOTP 시크릿 (선택사항)
+  totp_secret: ""
+  # 세션 파일 경로
+  session_file: "data/sessions/session.json"
+  
+  # API 요청 설정
+  api_delay_min: 1.0      # API 요청 간 최소 딜레이 (초)
+  api_delay_max: 3.0      # API 요청 간 최대 딜레이 (초)
+  api_cooldown_seconds: 300  # API 제한 시 쿨다운 (초, 기본 5분)
+  api_max_failures: 3     # 연속 로그인 실패 허용 횟수
+  
+  # 유저 ID 조회 설정
+  user_id_resolve_delay: 2.0  # 유저 ID 조회 간 딜레이 (초)
+  user_id_resolve_batch: 10   # 유저 ID 조회 배치 크기
+
+# 모니터링 설정
+monitor:
+  # 스토리 체크 주기 (초) - 스토리는 24시간이므로 30분~1시간 권장
+  check_interval: 1800  # 30분
+  # 한 번에 체크할 유저 수 (API 제한 회피)
+  batch_size: 20
+  # 배치 간 대기 시간 (초)
+  batch_delay: 5
+  # 타겟 유저 목록 파일
+  targets_file: "config/targets.json"
+  # 다운로드 기록 파일 (중복 방지)
+  history_file: "data/download_history.json"
+  # 스토리 만료 시간 (시간, 기본 24시간)
+  story_expire_hours: 24
+
+# 다운로드 설정
+downloader:
+  # 저장 디렉토리
+  output_dir: "data/stories"
+  # 파일명 형식
+  # {username}: 유저네임
+  # {story_id}: 스토리 ID
+  # %Y%m%d_%H%M%S: 날짜/시간
+  filename_format: "{username}_%Y%m%d_%H%M%S_{story_id}"
+  # 최대 동시 다운로드 수
+  max_concurrent: 3
+  # 비디오 스토리도 다운로드 (true/false)
+  download_videos: true
+  # 이미지 스토리도 다운로드 (true/false)
+  download_images: true
+  # 썸네일도 저장 (비디오의 경우)
+  save_thumbnails: false
+  # 최소 디스크 여유 공간 (MB)
+  min_disk_space_mb: 500
+  # 비디오 화질: highest(기본), lowest, 1080p, 720p, 480p, 360p
+  video_quality: "highest"
+  # 이미지 화질: highest(기본), lowest
+  image_quality: "highest"
+  
+  # 네트워크 설정
+  timeout_connect: 10     # 연결 타임아웃 (초)
+  timeout_read: 60        # 읽기 타임아웃 (초)
+  chunk_size: 8192        # 다운로드 청크 크기 (바이트)
+  max_retries: 3          # 다운로드 재시도 횟수
+  
+  # 디스크 및 대기열 설정
+  disk_check_interval_mb: 10  # 다운로드 중 디스크 체크 간격 (MB)
+  queue_check_interval: 1.0   # 대기열 체크 간격 (초)
+  max_completed_history: 1000 # 완료 기록 최대 보관 수
+
+# 클라우드 저장소 설정 (Cloudflare R2)
+cloud_storage:
+  enabled: false
+  provider: "r2"
+  r2:
+    account_id: "${R2_ACCOUNT_ID}"
+    access_key_id: "${R2_ACCESS_KEY}"
+    secret_access_key: "${R2_SECRET_KEY}"
+    bucket_name: "instagram-stories"
+    # 퍼블릭 URL (선택사항)
+    public_url: ""
+  # 업로드 후 로컬 파일 삭제
+  delete_after_upload: false
+  
+  # 업로드 설정
+  multipart_threshold_mb: 50  # 멀티파트 업로드 임계값 (MB)
+  multipart_chunksize_mb: 25  # 멀티파트 청크 크기 (MB)
+  max_concurrency: 5          # 업로드 동시성
+  connect_timeout: 30         # 연결 타임아웃 (초)
+  read_timeout: 60            # 읽기 타임아웃 (초)
+  max_retries: 5              # 업로드 재시도 횟수
+
+# 알림 설정
+notifications:
+  enabled: true
+  # 알림 제공자: "discord" 또는 "telegram"
+  provider: "discord"
+
+  # Discord 설정 (권장)
+  discord:
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+    queue_size: 100       # 메시지 큐 크기
+    max_retries: 3        # 메시지 재시도 횟수
+    message_delay: 0.5    # 메시지 간 딜레이 (초)
+
+  # Telegram 설정 (대안)
+  telegram:
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    queue_size: 100
+    max_retries: 3
+    message_delay: 0.5
+
+  # 일일 요약 시간 (24시간 형식)
+  daily_summary_hour: 23
+  daily_summary_minute: 0
+
+  # 알림 종류
+  notify_on:
+    # 새 스토리 감지 시
+    story_detected: true
+    # 다운로드 완료 시
+    download_complete: true
+    # 다운로드 실패 시
+    download_failed: true
+    # 일일 요약
+    daily_summary: true
+    # 오류 발생 시
+    errors: true
+
+# 데이터베이스 설정
+database:
+  # SQLite 데이터베이스 경로
+  path: "data/story_saver.db"
+
+# 로깅 설정
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "data/logs/story_saver.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# 고급 설정
+advanced:
+  # 프록시 설정 (선택사항)
+  proxy: ""
+  # User-Agent 커스터마이징 (빈 값이면 기본값 사용)
+  user_agent: ""
+  # 재시도 설정
+  max_retries: 3
+  retry_delay: 30
+  # 스토리 만료 전 재다운로드 방지 시간 (시간)
+  # 같은 스토리를 이 시간 내에 다시 다운로드하지 않음
+  duplicate_check_hours: 24
