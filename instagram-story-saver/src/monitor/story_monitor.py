@@ -291,7 +291,7 @@ class StoryMonitor:
         resolved_count = 0
         for i, target in enumerate(needs_resolve):
             try:
-                user_info = self.client.user_info_by_username(target.username)
+                user_info = self.client.user_info_by_username_v1(target.username)
                 target.user_id = user_info.pk
                 resolved_count += 1
                 logger.debug(f"  {target.username} -> {target.user_id}")

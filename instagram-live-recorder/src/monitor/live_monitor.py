@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from instagrapi import Client
-from instagrapi.types import User, Broadcast
+from instagrapi.types import User
 from instagrapi.exceptions import ClientError, ClientConnectionError
 from src.utils.logger import get_logger
 from src.utils.config import TargetUser, save_targets
@@ -88,7 +88,7 @@ class LiveMonitor:
         resolved_count = 0
         for i, target in enumerate(needs_resolve):
             try:
-                user_info = self.client.user_info_by_username(target.username)
+                user_info = self.client.user_info_by_username_v1(target.username)
                 target.user_id = user_info.pk
                 resolved_count += 1
                 logger.debug(f"  {target.username} -> {target.user_id}")
