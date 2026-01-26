@@ -368,6 +368,9 @@ class StoryDownloader:
                 if story.story_id in self.active_downloads:
                     del self.active_downloads[story.story_id]
                 self.completed_downloads.append(task)
+                # 완료 기록 크기 제한 (메모리 누적 방지)
+                if len(self.completed_downloads) > self.max_completed_history:
+                    self.completed_downloads = self.completed_downloads[-self.max_completed_history:]
     
     def _download_with_retry(
         self,

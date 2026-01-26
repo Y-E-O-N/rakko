@@ -163,6 +163,7 @@ class StreamRecorder:
         self.min_disk_space_mb = min_disk_space_mb
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.max_completed_history = 1000  # 완료 기록 최대 보관 수
 
         self.active_recordings: Dict[str, RecordingTask] = {}
         self.completed_recordings: List[RecordingTask] = []
@@ -424,6 +425,9 @@ class StreamRecorder:
                 if broadcast.broadcast_id in self.active_recordings:
                     del self.active_recordings[broadcast.broadcast_id]
                 self.completed_recordings.append(task)
+                # 완료 기록 크기 제한 (메모리 누적 방지)
+                if len(self.completed_recordings) > self.max_completed_history:
+                    self.completed_recordings = self.completed_recordings[-self.max_completed_history:]
     
     def _run_ytdlp(self, task: RecordingTask, stream_url: str):
         """yt-dlp로 스트림 녹화"""
@@ -526,7 +530,12 @@ class StreamRecorder:
                 raise DiskSpaceError("녹화 중 디스크 공간 부족")
         
         if task.process.returncode not in (0, 255):  # 255는 정상 종료
-            stderr = task.process.stderr.read().decode() if task.process.stderr else ""
+            stderr = ""
+            if task.process.stderr:
+                try:
+                    stderr = task.process.stderr.read().decode('utf-8', errors='replace')
+                except Exception:
+                    stderr = "(stderr 읽기 실패)"
             raise RecordingError(f"FFmpeg 종료 코드: {task.process.returncode}")
     
     def _get_format_string(self) -> str:
@@ -623,8 +632,13 @@ class StreamRecorder:
         with self._lock:
             for broadcast_id in list(self.active_recordings.keys()):
                 self.stop_recording(broadcast_id)
-        
-        self._executor.shutdown(wait=True, cancel_futures=True)
+
+        # Python 버전 호환성: cancel_futures는 3.9+에서만 지원
+        import sys
+        if sys.version_info >= (3, 9):
+            self._executor.shutdown(wait=True, cancel_futures=True)
+        else:
+            self._executor.shutdown(wait=True)
     
     def get_active_recordings(self) -> List[RecordingTask]:
         """활성 녹화 목록"""

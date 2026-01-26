@@ -435,7 +435,11 @@ class InstagramLiveRecorder:
             self.notifier.notify_shutdown(stats)
             # 알림 워커 스레드 정지
             self.notifier.stop()
-        
+
+        # 데이터베이스 연결 종료
+        if self.database:
+            self.database.close()
+
         console.print("[green]정상 종료되었습니다.[/green]")
     
     def show_status(self):

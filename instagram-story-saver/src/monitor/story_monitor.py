@@ -139,7 +139,8 @@ class DownloadHistory:
             temp_file = self.history_file.with_suffix('.tmp')
             with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            temp_file.rename(self.history_file)
+            # Windows 호환: rename() 대신 replace() 사용 (대상 파일 존재 시에도 동작)
+            temp_file.replace(self.history_file)
                 
         except Exception as e:
             logger.warning(f"다운로드 기록 저장 실패: {e}")
