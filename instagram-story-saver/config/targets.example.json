@@ -1,0 +1,21 @@
+{
+  "targets": [
+    {
+      "username": "example_user1",
+      "user_id": null,
+      "alias": "예시 유저 1",
+      "priority": "high",
+      "enabled": true,
+      "notes": "중요한 유저"
+    },
+    {
+      "username": "example_user2",
+      "user_id": null,
+      "alias": "예시 유저 2",
+      "priority": "normal",
+      "enabled": true,
+      "notes": ""
+    }
+  ],
+  "last_updated": null
+}
