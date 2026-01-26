@@ -83,7 +83,7 @@ downloader:
 
 # 클라우드 저장소 설정 (Cloudflare R2)
 cloud_storage:
-  enabled: false
+  enabled: true
   provider: "r2"
   r2:
     account_id: "${R2_ACCOUNT_ID}"
@@ -92,8 +92,8 @@ cloud_storage:
     bucket_name: "instagram-stories"
     # 퍼블릭 URL (선택사항)
     public_url: ""
-  # 업로드 후 로컬 파일 삭제
-  delete_after_upload: false
+  # 업로드 후 로컬 파일 삭제 (서버 운영 시 권장)
+  delete_after_upload: true
   
   # 업로드 설정
   multipart_threshold_mb: 50  # 멀티파트 업로드 임계값 (MB)

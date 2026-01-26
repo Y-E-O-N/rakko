@@ -1,0 +1,63 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'instagram-live-recorder/**'
+      - 'instagram-story-saver/**'
+      - 'deploy/**'
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Oracle Cloud
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "=== Deployment Started ==="
+            cd ~/instagram-recorder
+
+            # Pull latest code
+            echo "Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Update dependencies
+            echo "Updating dependencies..."
+            source venv/bin/activate
+            pip install -r instagram-live-recorder/requirements.txt -q
+            pip install -r instagram-story-saver/requirements.txt -q
+
+            # Restart services
+            echo "Restarting services..."
+            sudo systemctl restart instagram-live-recorder
+            sudo systemctl restart instagram-story-saver
+
+            # Check status
+            echo "=== Service Status ==="
+            sudo systemctl status instagram-live-recorder --no-pager -l || true
+            sudo systemctl status instagram-story-saver --no-pager -l || true
+
+            echo "=== Deployment Complete ==="
+
+      - name: Notify on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            echo "Deployment failed at $(date)" >> ~/deployment-errors.log

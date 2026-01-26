@@ -1,0 +1,24 @@
+[Unit]
+Description=Instagram Story Saver
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/instagram-recorder/instagram-story-saver
+Environment="PATH=/home/ubuntu/instagram-recorder/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/ubuntu/instagram-recorder/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+# 로그 설정
+StandardOutput=append:/home/ubuntu/instagram-recorder/logs/story-saver.log
+StandardError=append:/home/ubuntu/instagram-recorder/logs/story-saver-error.log
+
+# 리소스 제한
+MemoryMax=512M
+CPUQuota=30%
+
+[Install]
+WantedBy=multi-user.target
