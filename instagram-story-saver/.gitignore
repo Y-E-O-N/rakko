@@ -1,0 +1,140 @@
+# ============================================
+# 보안: 민감한 파일 (절대 커밋 금지)
+# ============================================
+
+# 환경 변수 파일
+.env
+.env.*
+*.env
+
+# 실제 설정 파일 (예시 파일만 커밋)
+config/settings.yaml
+config/targets.json
+
+# Instagram 세션 파일 (인증 토큰 포함)
+data/sessions/
+*.session
+*.session.json
+session.json
+
+# ============================================
+# 데이터 파일
+# ============================================
+
+# 스토리 파일
+data/stories/
+
+# 로그 파일
+data/logs/
+*.log
+
+# 데이터베이스
+data/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# 다운로드 기록
+data/download_history.json
+
+# ============================================
+# Python
+# ============================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================
+# IDE / Editor
+# ============================================
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Claude Code
+.claude/
+
+# ============================================
+# OS
+# ============================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# 기타
+# ============================================
+
+# 임시 파일
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 테스트 출력
+test_output/
