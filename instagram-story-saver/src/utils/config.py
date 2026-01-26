@@ -86,7 +86,8 @@ class Config:
     user_id_resolve_batch: int = 10  # 유저 ID 조회 배치 크기
     
     # Monitor
-    check_interval: int = 1800  # 30분
+    check_interval_min: int = 18000  # 5시간 (초)
+    check_interval_max: int = 21600  # 6시간 (초)
     batch_size: int = 20
     batch_delay: int = 5
     targets_file: str = "config/targets.json"
@@ -183,10 +184,10 @@ class Config:
             errors.append("instagram.password는 필수입니다")
         
         # 숫자 범위 검증
-        if self.check_interval < 300:  # 최소 5분
-            errors.append("check_interval은 최소 300초(5분) 이상이어야 합니다")
-        if self.check_interval > 7200:
-            errors.append("check_interval은 최대 7200초(2시간) 이하여야 합니다")
+        if self.check_interval_min < 300:  # 최소 5분
+            errors.append("check_interval_min은 최소 300초(5분) 이상이어야 합니다")
+        if self.check_interval_max < self.check_interval_min:
+            errors.append("check_interval_max는 check_interval_min보다 커야 합니다")
         
         if self.batch_size < 1 or self.batch_size > 50:
             errors.append("batch_size는 1-50 사이여야 합니다")
@@ -308,7 +309,8 @@ def load_config(config_path: str = "config/settings.yaml") -> Config:
         user_id_resolve_batch=data.get('instagram', {}).get('user_id_resolve_batch', 10),
         
         # Monitor
-        check_interval=data.get('monitor', {}).get('check_interval', 1800),
+        check_interval_min=data.get('monitor', {}).get('check_interval_min', 18000),
+        check_interval_max=data.get('monitor', {}).get('check_interval_max', 21600),
         batch_size=data.get('monitor', {}).get('batch_size', 20),
         batch_delay=data.get('monitor', {}).get('batch_delay', 5),
         targets_file=data.get('monitor', {}).get('targets_file', 'config/targets.json'),

@@ -6,12 +6,13 @@ Instagram Story Saver
 import sys
 import signal
 import argparse
+import random
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 from rich.console import Console
 from rich.table import Table
@@ -273,7 +274,36 @@ class InstagramStorySaver:
 
         self.downloader.on('on_download_complete', on_download_complete)
         self.downloader.on('on_download_failed', on_download_failed)
-    
+
+    def _get_random_interval(self) -> int:
+        """랜덤 체크 주기 반환 (초)"""
+        return random.randint(
+            self.config.check_interval_min,
+            self.config.check_interval_max
+        )
+
+    def _schedule_next_check(self):
+        """다음 체크 스케줄링"""
+        interval = self._get_random_interval()
+        next_run = datetime.now() + timedelta(seconds=interval)
+
+        # 기존 작업 제거 (있으면)
+        try:
+            self.scheduler.remove_job('check_stories')
+        except Exception:
+            pass
+
+        # 새 작업 등록
+        self.scheduler.add_job(
+            self._check_stories,
+            DateTrigger(run_date=next_run),
+            id='check_stories',
+            name='스토리 체크'
+        )
+
+        interval_min = interval // 60
+        self.logger.debug(f"다음 체크: {next_run.strftime('%H:%M:%S')} ({interval_min}분 후)")
+
     def _check_stories(self):
         """스토리 체크 (스케줄러에서 호출)"""
         try:
@@ -310,6 +340,10 @@ class InstagramStorySaver:
             notifier = self._get_notifier()
             if notifier and self.config.notify_errors:
                 notifier.notify_error(str(e))
+        finally:
+            # 다음 체크 스케줄링 (랜덤 주기)
+            if self._is_running:
+                self._schedule_next_check()
     
     def _send_daily_summary(self):
         """일일 요약 전송"""
@@ -370,15 +404,8 @@ class InstagramStorySaver:
         # 스케줄러 설정
         self.scheduler = BlockingScheduler()
 
-        # 스토리 체크 작업 등록
-        self.scheduler.add_job(
-            self._check_stories,
-            IntervalTrigger(seconds=self.config.check_interval),
-            id='check_stories',
-            name='스토리 체크',
-            max_instances=1,
-            coalesce=True
-        )
+        # 스토리 체크 작업 등록 (랜덤 주기)
+        self._schedule_next_check()
 
         # 일일 요약 작업 등록
         if self.config.notify_daily_summary:
@@ -391,10 +418,12 @@ class InstagramStorySaver:
                 name='일일 요약'
             )
             console.print(f"  ✓ 일일 요약: 매일 {summary_hour:02d}:{summary_minute:02d}")
-        
+
+        interval_min = self.config.check_interval_min // 60
+        interval_max = self.config.check_interval_max // 60
         console.print(Panel.fit(
             f"[green]모니터링 시작![/green]\n"
-            f"체크 주기: {self.config.check_interval // 60}분\n"
+            f"체크 주기: {interval_min}~{interval_max}분 (랜덤)\n"
             f"대상: {len(self.config.targets)}명\n\n"
             f"[dim]종료하려면 Ctrl+C를 누르세요[/dim]",
             border_style="green"
