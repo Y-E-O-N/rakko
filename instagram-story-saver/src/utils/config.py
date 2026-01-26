@@ -110,7 +110,8 @@ class Config:
     download_disk_check_interval_mb: int = 10  # 디스크 체크 간격 (MB)
     download_queue_check_interval: float = 1.0  # 대기열 체크 간격 (초)
     max_completed_history: int = 1000  # 완료 기록 최대 보관 수
-    
+    download_user_agent: str = ""  # 다운로드 요청 User-Agent (빈 값이면 기본값 사용)
+
     # Cloud Storage
     cloud_enabled: bool = False
     cloud_provider: str = "r2"
@@ -135,6 +136,7 @@ class Config:
     discord_queue_size: int = 100
     discord_max_retries: int = 3
     discord_message_delay: float = 0.5
+    discord_request_timeout: int = 10  # Discord 요청 타임아웃 (초)
     # Telegram 설정
     telegram_token: str = ""
     telegram_chat_id: str = ""
@@ -330,7 +332,8 @@ def load_config(config_path: str = "config/settings.yaml") -> Config:
         download_disk_check_interval_mb=data.get('downloader', {}).get('disk_check_interval_mb', 10),
         download_queue_check_interval=data.get('downloader', {}).get('queue_check_interval', 1.0),
         max_completed_history=data.get('downloader', {}).get('max_completed_history', 1000),
-        
+        download_user_agent=data.get('downloader', {}).get('user_agent', ''),
+
         # Cloud Storage
         cloud_enabled=data.get('cloud_storage', {}).get('enabled', False),
         cloud_provider=data.get('cloud_storage', {}).get('provider', 'r2'),
@@ -355,6 +358,7 @@ def load_config(config_path: str = "config/settings.yaml") -> Config:
         discord_queue_size=data.get('notifications', {}).get('discord', {}).get('queue_size', 100),
         discord_max_retries=data.get('notifications', {}).get('discord', {}).get('max_retries', 3),
         discord_message_delay=data.get('notifications', {}).get('discord', {}).get('message_delay', 0.5),
+        discord_request_timeout=data.get('notifications', {}).get('discord', {}).get('request_timeout', 10),
         # Telegram
         telegram_token=telegram_token,
         telegram_chat_id=telegram_chat_id,

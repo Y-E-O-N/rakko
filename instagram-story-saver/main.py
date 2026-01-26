@@ -157,7 +157,8 @@ class InstagramStorySaver:
             max_retries=self.config.download_max_retries,
             disk_check_interval_mb=self.config.download_disk_check_interval_mb,
             queue_check_interval=self.config.download_queue_check_interval,
-            max_completed_history=self.config.max_completed_history
+            max_completed_history=self.config.max_completed_history,
+            user_agent=self.config.download_user_agent
         )
         console.print("  ✓ 다운로더 준비 완료")
         

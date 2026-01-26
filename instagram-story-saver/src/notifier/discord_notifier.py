@@ -67,12 +67,14 @@ class DiscordNotifier:
         enabled: bool = True,
         max_retries: int = 3,
         queue_size: int = 100,
-        message_delay: float = 0.5
+        message_delay: float = 0.5,
+        request_timeout: int = 10
     ):
         self.webhook_url = webhook_url
         self.enabled = enabled and bool(webhook_url)
         self.max_retries = max_retries
         self.message_delay = message_delay
+        self.request_timeout = request_timeout
 
         if not self.enabled:
             return
@@ -128,7 +130,7 @@ class DiscordNotifier:
                 response = self._session.post(
                     self.webhook_url,
                     json=payload,
-                    timeout=10
+                    timeout=self.request_timeout
                 )
 
                 # Rate limit 처리
@@ -408,5 +410,6 @@ def create_discord_notifier(config) -> Optional[DiscordNotifier]:
         enabled=True,
         max_retries=config.discord_max_retries,
         queue_size=config.discord_queue_size,
-        message_delay=config.discord_message_delay
+        message_delay=config.discord_message_delay,
+        request_timeout=config.discord_request_timeout
     )

@@ -104,6 +104,13 @@ def check_disk_space(path: Path, min_space_mb: int = 500) -> bool:
 class StoryDownloader:
     """스토리 다운로더"""
     
+    # 기본 User-Agent
+    DEFAULT_USER_AGENT = (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/120.0.0.0 Safari/537.36'
+    )
+
     def __init__(
         self,
         output_dir: str = "data/stories",
@@ -118,7 +125,8 @@ class StoryDownloader:
         max_retries: int = 3,
         disk_check_interval_mb: int = 10,
         queue_check_interval: float = 1.0,
-        max_completed_history: int = 1000
+        max_completed_history: int = 1000,
+        user_agent: str = ""
     ):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -162,11 +170,7 @@ class StoryDownloader:
         # requests 세션 (연결 재사용)
         self._session = requests.Session()
         self._session.headers.update({
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
-            ),
+            'User-Agent': user_agent if user_agent else self.DEFAULT_USER_AGENT,
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
         })
