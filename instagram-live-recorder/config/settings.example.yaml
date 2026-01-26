@@ -1,0 +1,96 @@
+# Instagram Live Recorder Configuration
+# 이 파일을 settings.yaml로 복사하고 환경변수를 설정하세요
+#
+# 필수 환경변수:
+#   IG_USERNAME        - Instagram 사용자명
+#   IG_PASSWORD        - Instagram 비밀번호
+#   DISCORD_WEBHOOK_URL - Discord Webhook URL (알림용)
+#
+# 선택 환경변수:
+#   IG_TOTP_SECRET     - 2FA TOTP 시크릿
+#   R2_ACCOUNT_ID      - Cloudflare R2 Account ID
+#   R2_ACCESS_KEY_ID   - R2 Access Key
+#   R2_SECRET_ACCESS_KEY - R2 Secret Key
+#   R2_BUCKET_NAME     - R2 버킷 이름
+
+# Instagram 계정 설정
+instagram:
+  username: "${IG_USERNAME}"
+  password: "${IG_PASSWORD}"
+  totp_secret: "${IG_TOTP_SECRET}"
+  session_file: "data/sessions/session.json"
+
+# 모니터링 설정
+monitor:
+  # 라이브 체크 주기 (초) - 최소 60초
+  check_interval: 300
+  # 한 번에 체크할 유저 수
+  batch_size: 50
+  # 배치 간 대기 시간 (초)
+  batch_delay: 10
+  # 타겟 유저 목록 파일
+  targets_file: "config/targets.json"
+
+# 녹화 설정
+recorder:
+  output_dir: "data/recordings"
+  filename_format: "{username}_%Y%m%d_%H%M%S"
+  output_format: "mp4"
+  max_concurrent: 5
+  quality: "best"
+  # 녹화 실패 시 재시도
+  max_retries: 3
+  retry_delay: 30
+
+# 데이터베이스 설정
+database:
+  path: "data/recorder.db"
+
+# 클라우드 저장소 (Cloudflare R2)
+cloud_storage:
+  enabled: false
+  provider: "r2"
+  r2:
+    account_id: "${R2_ACCOUNT_ID}"
+    access_key_id: "${R2_ACCESS_KEY_ID}"
+    secret_access_key: "${R2_SECRET_ACCESS_KEY}"
+    bucket_name: "${R2_BUCKET_NAME}"
+    delete_after_upload: false
+    public_url: ""
+
+# 알림 설정
+notifications:
+  enabled: true
+  provider: "discord"
+
+  discord:
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+
+  telegram:
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+
+  notify_on:
+    live_detected: true
+    recording_started: true
+    recording_finished: true
+    recording_failed: true
+    daily_summary: true
+
+  daily_summary_time:
+    hour: 23
+    minute: 0
+
+# 로깅 설정
+logging:
+  level: "INFO"
+  file: "data/logs/recorder.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# 고급 설정
+advanced:
+  proxy: ""
+  user_agent: ""
+  max_retries: 3
+  retry_delay: 30
