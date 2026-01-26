@@ -10,7 +10,7 @@ echo "Instagram Recorder 서버 설정"
 echo "=========================================="
 
 # 변수 설정
-REPO_URL="https://github.com/YOUR_USERNAME/YOUR_REPO.git"  # 수정 필요
+REPO_URL="https://github.com/Y-E-O-N/rakko.git"
 APP_DIR="/home/ubuntu/instagram-recorder"
 VENV_DIR="$APP_DIR/venv"
 

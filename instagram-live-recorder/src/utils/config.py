@@ -372,21 +372,26 @@ def load_config(config_path: str = "config/settings.yaml") -> Config:
 def load_targets(targets_path: str) -> List[TargetUser]:
     """
     타겟 유저 목록 로드
-    
+
+    지원 형식:
+    1. 간단한 형식: {"targets": ["user1", "user2", "user3"]}
+    2. 상세 형식: {"targets": [{"username": "user1", "alias": "별명", ...}]}
+    3. 혼합 형식: {"targets": ["user1", {"username": "user2", "alias": "별명"}]}
+
     Args:
         targets_path: 타겟 파일 경로
-    
+
     Returns:
         TargetUser 리스트
-    
+
     Raises:
         ConfigValidationError: JSON 파싱 실패 시
     """
     targets_file = Path(targets_path)
-    
+
     if not targets_file.exists():
         return []
-    
+
     try:
         with open(targets_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -398,38 +403,48 @@ def load_targets(targets_path: str) -> List[TargetUser]:
         )
     except Exception as e:
         raise ConfigValidationError(f"타겟 파일 읽기 오류: {e}")
-    
+
     targets = []
     errors = []
-    
-    for i, item in enumerate(data.get('targets', [])):
+    target_list = data.get('targets', []) if isinstance(data, dict) else data
+
+    for i, item in enumerate(target_list):
         try:
-            username = item.get('username', '').strip()
-            if not username:
+            # 문자열인 경우 (간단한 형식)
+            if isinstance(item, str):
+                username = item.strip()
+                if not username:
+                    continue
+                target = TargetUser(username=username)
+            # 딕셔너리인 경우 (상세 형식)
+            elif isinstance(item, dict):
+                username = item.get('username', '').strip()
+                if not username:
+                    continue
+                target = TargetUser(
+                    username=username,
+                    user_id=item.get('user_id'),
+                    alias=item.get('alias'),
+                    priority=item.get('priority', 'normal'),
+                    enabled=item.get('enabled', True),
+                    notes=item.get('notes', '')
+                )
+            else:
                 continue
-            
-            target = TargetUser(
-                username=username,
-                user_id=item.get('user_id'),
-                alias=item.get('alias'),
-                priority=item.get('priority', 'normal'),
-                enabled=item.get('enabled', True),
-                notes=item.get('notes', '')
-            )
-            
+
             if target.enabled:
                 targets.append(target)
-                
+
         except ConfigValidationError as e:
             errors.append(f"타겟 #{i + 1}: {e}")
-    
+
     if errors:
         # 경고만 출력하고 계속 진행
         import logging
         logger = logging.getLogger("ig_recorder")
         for error in errors:
             logger.warning(error)
-    
+
     return targets
 
 
