@@ -1,0 +1,23 @@
+# Instagram API
+instagrapi>=2.0.0
+
+# 스케줄링
+APScheduler>=3.10.0
+
+# 콘솔 UI
+rich>=13.0.0
+
+# 설정 파일
+PyYAML>=6.0
+
+# Telegram 알림 (선택사항)
+python-telegram-bot>=20.0
+
+# 2FA 지원 (선택사항)
+pyotp>=2.8.0
+
+# 클라우드 스토리지 (선택사항)
+boto3>=1.28.0
+
+# HTTP 요청
+requests>=2.31.0
