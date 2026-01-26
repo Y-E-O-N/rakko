@@ -34,44 +34,65 @@ show_targets() {
 }
 
 add_target() {
-    read -p "추가할 Instagram 유저네임: " username
-    if [ -z "$username" ]; then
+    echo "추가할 Instagram 유저네임 입력 (여러 명: 쉼표 또는 공백으로 구분)"
+    echo "예: user1, user2, user3"
+    read -p "> " input
+
+    if [ -z "$input" ]; then
         echo -e "${RED}유저네임을 입력하세요${NC}"
         return
     fi
 
-    # 현재 목록 확인
-    if grep -q "\"$username\"" "$TARGETS_FILE"; then
-        echo -e "${RED}이미 존재하는 유저입니다: $username${NC}"
-        return
-    fi
+    # 쉼표와 공백을 구분자로 사용
+    usernames=$(echo "$input" | tr ',' ' ' | tr -s ' ')
+    added_count=0
 
-    # story-saver에 추가
-    python3 << EOF
+    for username in $usernames; do
+        # 공백 제거
+        username=$(echo "$username" | xargs)
+
+        if [ -z "$username" ]; then
+            continue
+        fi
+
+        # 현재 목록 확인
+        if grep -q "\"$username\"" "$TARGETS_FILE"; then
+            echo -e "${YELLOW}이미 존재: $username${NC}"
+            continue
+        fi
+
+        # story-saver에 추가
+        python3 << EOF
 import json
 with open('$TARGETS_FILE', 'r') as f:
     data = json.load(f)
 data['targets'].append('$username')
 with open('$TARGETS_FILE', 'w') as f:
     json.dump(data, f, indent=2)
-print('story-saver에 추가됨')
 EOF
 
-    # live-recorder에 추가
-    python3 << EOF
+        # live-recorder에 추가
+        python3 << EOF
 import json
 with open('$LIVE_TARGETS_FILE', 'r') as f:
     data = json.load(f)
 data['targets'].append('$username')
 with open('$LIVE_TARGETS_FILE', 'w') as f:
     json.dump(data, f, indent=2)
-print('live-recorder에 추가됨')
 EOF
 
-    echo -e "${GREEN}추가 완료: $username${NC}"
-    read -p "서비스를 재시작할까요? (y/n): " restart
-    if [ "$restart" = "y" ]; then
-        restart_services
+        echo -e "${GREEN}추가됨: $username${NC}"
+        ((added_count++))
+    done
+
+    echo ""
+    echo -e "${GREEN}총 ${added_count}명 추가 완료${NC}"
+
+    if [ $added_count -gt 0 ]; then
+        read -p "서비스를 재시작할까요? (y/n): " restart
+        if [ "$restart" = "y" ]; then
+            restart_services
+        fi
     fi
 }
 
