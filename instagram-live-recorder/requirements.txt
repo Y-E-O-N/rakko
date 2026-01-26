@@ -1,0 +1,24 @@
+# Instagram API
+instagrapi==2.1.2
+
+# Video downloading and processing
+yt-dlp>=2024.1.0
+ffmpeg-python>=0.2.0
+
+# Scheduling
+APScheduler>=3.10.0
+
+# Cloud Storage (Cloudflare R2 - S3 compatible)
+boto3>=1.34.0
+
+# Notifications
+python-telegram-bot>=20.7
+
+# Configuration
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Utilities
+requests>=2.31.0
+aiohttp>=3.9.0
+rich>=13.7.0  # Beautiful console output
