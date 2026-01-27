@@ -67,15 +67,31 @@ class StoryItem:
     @property
     def time_remaining(self) -> timedelta:
         """남은 시간 (음수 방지)"""
-        remaining = self.expire_at - datetime.now()
-        if remaining.total_seconds() < 0:
+        try:
+            now = datetime.now()
+            expire = self.expire_at
+            # timezone-aware면 naive로 변환
+            if expire.tzinfo is not None:
+                expire = expire.replace(tzinfo=None)
+            remaining = expire - now
+            if remaining.total_seconds() < 0:
+                return timedelta(0)
+            return remaining
+        except Exception:
             return timedelta(0)
-        return remaining
-    
+
     @property
     def is_expired(self) -> bool:
         """만료 여부"""
-        return datetime.now() > self.expire_at
+        try:
+            now = datetime.now()
+            expire = self.expire_at
+            # timezone-aware면 naive로 변환
+            if expire.tzinfo is not None:
+                expire = expire.replace(tzinfo=None)
+            return now > expire
+        except Exception:
+            return False
 
 
 @dataclass
@@ -538,19 +554,9 @@ class StoryMonitorV2(StoryMonitor):
             else:
                 logger.info(f"📋 Reels Tray에서 타겟 중 스토리 있는 사람 없음")
 
-            # Reels Tray에 없는 타겟들도 개별 체크
-            missing_targets = [
-                target_usernames[u] for u in target_usernames
-                if u not in found_targets
-            ]
-
-            if missing_targets:
-                logger.info(f"📋 Reels Tray에 없는 {len(missing_targets)}명 개별 체크 필요")
-                fallback_stories = self._check_missing_targets(missing_targets)
-                new_stories.extend(fallback_stories)
-                logger.info(f"📋 개별 체크 완료: {len(fallback_stories)}개 새 스토리 발견")
-            else:
-                logger.info(f"📋 모든 타겟이 Reels Tray에서 확인됨")
+            # Reels Tray에 없는 타겟 = 스토리 없음 (팔로우 중인 경우)
+            missing_count = len(target_usernames) - len(found_targets)
+            logger.info(f"📋 Reels Tray에 없는 {missing_count}명은 현재 스토리 없음 (스킵)")
 
             logger.info(f"🏁 check_all_stories 완료: 총 {len(new_stories)}개 새 스토리")
 
