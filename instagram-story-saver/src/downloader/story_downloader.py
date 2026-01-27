@@ -191,13 +191,14 @@ class StoryDownloader:
     def download(self, story: StoryItem) -> Optional[DownloadTask]:
         """스토리 다운로드 시작"""
         story_id = story.story_id
-        
+        logger.info(f"📥 download() 호출됨: {story.username} (story_id: {story_id})")
+
         # 이미 다운로드 중인지 확인
         with self._lock:
             if story_id in self.active_downloads:
-                logger.debug(f"이미 다운로드 중: {story.username}")
+                logger.info(f"⏭️ 이미 다운로드 중: {story.username}")
                 return self.active_downloads[story_id]
-            
+
             # 최대 동시 다운로드 수 확인
             if len(self.active_downloads) >= self.max_concurrent:
                 # 대기열에 추가
@@ -206,18 +207,23 @@ class StoryDownloader:
                     if not any(s.story_id == story_id for s in self._pending_queue):
                         self._pending_queue.append(story)
                         logger.info(f"📋 대기열 추가: {story.username} (대기: {len(self._pending_queue)}개)")
+                    else:
+                        logger.info(f"⏭️ 이미 대기열에 있음: {story.username}")
                 return None
-        
+
+        logger.info(f"🚀 다운로드 시작: {story.username}")
         return self._start_download(story)
     
     def _start_download(self, story: StoryItem) -> Optional[DownloadTask]:
         """실제 다운로드 시작"""
         story_id = story.story_id
-        
+        logger.info(f"📥 _start_download() 호출됨: {story.username} (story_id: {story_id})")
+
         # 디스크 공간 확인
         if not check_disk_space(self.output_dir, self.min_disk_space_mb):
-            logger.error("디스크 공간 부족")
+            logger.error("❌ 디스크 공간 부족")
             return None
+        logger.info(f"✅ 디스크 공간 확인 완료")
         
         # URL 확인
         media_url = story.media_url
@@ -296,29 +302,39 @@ class StoryDownloader:
     def _download_file(self, task: DownloadTask):
         """파일 다운로드 (백그라운드 스레드)"""
         story = task.story
-        
+
         logger.info(
-            f"⬇️ 다운로드 시작: {story.display_name} "
+            f"⬇️ _download_file 시작: {story.display_name} "
             f"({'비디오' if story.is_video else '이미지'})"
         )
-        
+        logger.info(f"   📁 저장 경로: {task.output_path}")
+        logger.info(f"   🔗 미디어 URL: {story.media_url[:100]}..." if story.media_url else "   ⚠️ 미디어 URL 없음")
+
         task.status = "downloading"
         task.started_at = datetime.now()
-        
+
         self._emit('on_download_start', task)
-        
+
         try:
             media_url = story.media_url
-            
+
+            if not media_url:
+                logger.error(f"❌ 미디어 URL이 없음: {story.display_name}")
+                raise DownloadError("미디어 URL이 없습니다")
+
             # URL 검증
             try:
+                logger.info(f"   🔒 URL 보안 검증 중...")
                 validate_media_url(media_url)
+                logger.info(f"   ✅ URL 보안 검증 통과")
             except SecurityError as e:
-                logger.error(f"URL 보안 검증 실패: {e}")
+                logger.error(f"❌ URL 보안 검증 실패: {e}")
                 raise DownloadError(f"보안 검증 실패: {e}")
-            
+
             # 다운로드
+            logger.info(f"   📥 파일 다운로드 중...")
             self._download_with_retry(media_url, task.output_path)
+            logger.info(f"   ✅ 파일 다운로드 완료: {task.output_path}")
             
             # 썸네일 저장 (비디오의 경우)
             if self.save_thumbnails and story.is_video and story.thumbnail_url:
