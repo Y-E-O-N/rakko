@@ -398,18 +398,32 @@ class StoryMonitor:
     def _check_user_stories(self, target: TargetUser) -> List[StoryItem]:
         """개별 유저의 스토리 확인"""
         stories = []
-        
+
+        logger.info(f"      🔍 _check_user_stories 호출: {target.username} (user_id: {target.user_id})")
+
         try:
+            logger.info(f"      📡 client.user_stories({target.user_id}) 호출...")
             user_stories = self.client.user_stories(target.user_id)
-            
-            for story in user_stories:
+            logger.info(f"      ✅ API 응답: {len(user_stories)}개 스토리")
+
+            for idx, story in enumerate(user_stories):
+                logger.info(f"      📋 파싱 중: 스토리 {idx+1}/{len(user_stories)}, pk={story.pk}")
                 story_item = self._parse_story(story, target)
-                if story_item and not story_item.is_expired:
-                    stories.append(story_item)
-                    
+                if story_item:
+                    if story_item.is_expired:
+                        logger.info(f"      ⏭️ 스토리 {story.pk}: 만료됨, 스킵")
+                    else:
+                        logger.info(f"      ✅ 스토리 {story.pk}: 유효, 추가")
+                        stories.append(story_item)
+                else:
+                    logger.warning(f"      ⚠️ 스토리 {story.pk}: 파싱 실패")
+
         except Exception as e:
-            logger.debug(f"스토리 조회 에러 ({target.username}): {e}")
-        
+            logger.error(f"      ❌ 스토리 조회 에러 ({target.username}): {e}")
+            import traceback
+            logger.error(f"      상세: {traceback.format_exc()}")
+
+        logger.info(f"      🔍 _check_user_stories 완료: {len(stories)}개 반환")
         return stories
     
     def _parse_story(self, story: Story, target: TargetUser) -> Optional[StoryItem]:
@@ -495,58 +509,50 @@ class StoryMonitorV2(StoryMonitor):
         found_targets = set()  # Reels Tray에서 찾은 타겟
 
         try:
-            # Reels Tray에서 모든 스토리 가져오기
-            reels = self._get_reels_tray()
+            logger.info(f"🚀 check_all_stories 시작: 총 {len(target_usernames)}명 타겟")
 
+            # Reels Tray에서 스토리 있는 사용자 목록 가져오기
+            logger.info(f"📡 Reels Tray API 호출 중...")
+            reels = self._get_reels_tray()
+            logger.info(f"📋 Reels Tray: {len(reels)}개 계정의 스토리 발견")
+
+            # Reels Tray에서 타겟 사용자 중 스토리 있는 사람 찾기
+            tray_targets = []
             for reel in reels:
                 username = reel.get('user', {}).get('username', '').lower()
+                if username in target_usernames:
+                    target = target_usernames[username]
+                    found_targets.add(username)
+                    tray_targets.append(target)
+                    logger.debug(f"   ✅ 타겟 발견: {username}")
 
-                if username not in target_usernames:
-                    continue
+            logger.info(f"📋 타겟 중 스토리 있는 사람: {len(tray_targets)}명")
+            logger.info(f"📋 타겟 목록: {[t.username for t in tray_targets[:10]]}{'...' if len(tray_targets) > 10 else ''}")
 
-                target = target_usernames[username]
-                found_targets.add(username)
+            # Reels Tray에서 찾은 타겟들의 스토리를 개별 API로 가져오기
+            if tray_targets:
+                logger.info(f"📋 {len(tray_targets)}명 스토리 다운로드 시작...")
+                tray_stories = self._check_missing_targets(tray_targets)
+                new_stories.extend(tray_stories)
+                logger.info(f"📋 Reels Tray 타겟 체크 완료: {len(tray_stories)}개 새 스토리")
+            else:
+                logger.info(f"📋 Reels Tray에서 타겟 중 스토리 있는 사람 없음")
 
-                # 스토리 아이템들 처리
-                items = reel.get('items', [])
-                for item in items:
-                    story = self._parse_reel_item(item, target)
-
-                    if not story or story.is_expired:
-                        continue
-
-                    # 중복 체크
-                    if self.history.is_downloaded(story.story_id):
-                        continue
-
-                    # 미디어 타입 필터
-                    if story.is_video and not self.download_videos:
-                        continue
-                    if story.is_image and not self.download_images:
-                        continue
-
-                    new_stories.append(story)
-
-                    with self._lock:
-                        self.state.total_new_stories += 1
-
-                    logger.info(
-                        f"📸 새 스토리: {story.display_name} "
-                        f"({'비디오' if story.is_video else '이미지'})"
-                    )
-
-                    self._emit('on_new_story', story)
-
-            # Reels Tray에서 찾지 못한 타겟들은 개별 API로 체크
+            # Reels Tray에 없는 타겟들도 개별 체크
             missing_targets = [
                 target_usernames[u] for u in target_usernames
                 if u not in found_targets
             ]
 
             if missing_targets:
-                logger.debug(f"Reels Tray에 없는 타겟 {len(missing_targets)}명, 개별 API로 체크")
+                logger.info(f"📋 Reels Tray에 없는 {len(missing_targets)}명 개별 체크 필요")
                 fallback_stories = self._check_missing_targets(missing_targets)
                 new_stories.extend(fallback_stories)
+                logger.info(f"📋 개별 체크 완료: {len(fallback_stories)}개 새 스토리 발견")
+            else:
+                logger.info(f"📋 모든 타겟이 Reels Tray에서 확인됨")
+
+            logger.info(f"🏁 check_all_stories 완료: 총 {len(new_stories)}개 새 스토리")
 
         except ClientConnectionError as e:
             logger.warning(f"네트워크 오류로 스토리 피드 조회 실패: {e}")
@@ -566,26 +572,38 @@ class StoryMonitorV2(StoryMonitor):
     def _check_missing_targets(self, targets: List) -> List[StoryItem]:
         """Reels Tray에 없는 타겟들 개별 체크"""
         new_stories = []
+        logger.info(f"🔍 _check_missing_targets 시작: {len(targets)}명 체크 예정")
 
         for i, target in enumerate(targets):
+            logger.info(f"🔍 [{i+1}/{len(targets)}] 처리 시작: {target.username} (user_id: {target.user_id})")
+
             if target.user_id is None:
+                logger.warning(f"⚠️ [{i+1}/{len(targets)}] {target.username}: user_id 없음, 스킵")
                 continue
 
             try:
+                logger.info(f"🔍 [{i+1}/{len(targets)}] {target.username} API 호출 중...")
                 stories = self._check_user_stories(target)
+                logger.info(f"✅ [{i+1}/{len(targets)}] {target.username}: {len(stories)}개 스토리 반환됨")
 
-                for story in stories:
+                for j, story in enumerate(stories):
+                    logger.info(f"   📋 스토리 {j+1}/{len(stories)}: ID={story.story_id}, 타입={'비디오' if story.is_video else '이미지'}")
+
                     # 중복 체크
                     if self.history.is_downloaded(story.story_id):
+                        logger.info(f"   ⏭️ 스토리 {story.story_id}: 이미 다운로드됨, 스킵")
                         continue
 
                     # 미디어 타입 필터
                     if story.is_video and not self.download_videos:
+                        logger.info(f"   ⏭️ 스토리 {story.story_id}: 비디오 다운로드 비활성화, 스킵")
                         continue
                     if story.is_image and not self.download_images:
+                        logger.info(f"   ⏭️ 스토리 {story.story_id}: 이미지 다운로드 비활성화, 스킵")
                         continue
 
                     new_stories.append(story)
+                    logger.info(f"   ✅ 스토리 {story.story_id}: new_stories에 추가됨 (현재 {len(new_stories)}개)")
 
                     with self._lock:
                         self.state.total_new_stories += 1
@@ -595,19 +613,34 @@ class StoryMonitorV2(StoryMonitor):
                         f"({'비디오' if story.is_video else '이미지'})"
                     )
 
+                    logger.info(f"   📤 on_new_story 이벤트 발생: {story.story_id}")
                     self._emit('on_new_story', story)
+                    logger.info(f"   ✅ on_new_story 이벤트 완료: {story.story_id}")
 
             except ClientConnectionError as e:
-                logger.warning(f"네트워크 오류 ({target.username}): {e}")
+                logger.warning(f"❌ 네트워크 오류 ({target.username}): {e}")
             except ClientError as e:
-                logger.warning(f"API 오류 ({target.username}): {e}")
+                logger.warning(f"❌ API 오류 ({target.username}): {e}")
+                # Rate limit 감지 시 더 긴 대기
+                if "feedback_required" in str(e) or "rate" in str(e).lower():
+                    logger.warning("⏳ Rate limit 감지, 30초 대기...")
+                    time.sleep(30)
             except Exception as e:
-                logger.error(f"스토리 체크 실패 ({target.username}): {e}")
+                logger.error(f"❌ 스토리 체크 실패 ({target.username}): {e}")
+                import traceback
+                logger.error(f"   상세: {traceback.format_exc()}")
+
+            # 개별 API 호출 사이 딜레이 (rate limit 방지)
+            if i + 1 < len(targets):
+                logger.debug(f"⏳ {self.user_id_resolve_delay}초 대기...")
+                time.sleep(self.user_id_resolve_delay)  # 기본 2초
 
             # 배치 딜레이
             if (i + 1) % self.batch_size == 0 and i + 1 < len(targets):
+                logger.info(f"⏳ 배치 {(i+1)//self.batch_size} 완료, {self.batch_delay}초 대기...")
                 time.sleep(self.batch_delay)
 
+        logger.info(f"🔍 _check_missing_targets 완료: 총 {len(new_stories)}개 새 스토리")
         return new_stories
     
     def _get_reels_tray(self) -> List[Dict]:
