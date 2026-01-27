@@ -510,10 +510,16 @@ class StoryMonitor:
 class StoryMonitorV2(StoryMonitor):
     """
     개선된 스토리 모니터 - Reels Tray 기반
-    
+
     팔로잉의 모든 스토리를 한 번에 가져와서 API 호출 최소화
     """
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 사용자별 latest_reel_media 캐시 (username -> timestamp)
+        # 이 값이 변경되지 않으면 새 스토리가 없다는 의미
+        self._latest_reel_cache: Dict[str, int] = {}
+
     def check_all_stories(self) -> List[StoryItem]:
         """Reels Tray에서 스토리 확인 (실패 시 개별 API 폴백)"""
         with self._lock:
@@ -534,16 +540,33 @@ class StoryMonitorV2(StoryMonitor):
 
             # Reels Tray에서 타겟 사용자 중 스토리 있는 사람 찾기
             tray_targets = []
+            skipped_unchanged = 0
             for reel in reels:
                 username = reel.get('user', {}).get('username', '').lower()
                 if username in target_usernames:
                     target = target_usernames[username]
                     found_targets.add(username)
-                    tray_targets.append(target)
-                    logger.debug(f"   ✅ 타겟 발견: {username}")
 
-            logger.info(f"📋 타겟 중 스토리 있는 사람: {len(tray_targets)}명")
-            logger.info(f"📋 타겟 목록: {[t.username for t in tray_targets[:10]]}{'...' if len(tray_targets) > 10 else ''}")
+                    # latest_reel_media 타임스탬프 확인 (새 스토리 여부 판단)
+                    latest_reel_media = reel.get('latest_reel_media', 0)
+
+                    # 캐시된 값과 비교: 변경 없으면 API 호출 스킵
+                    cached_timestamp = self._latest_reel_cache.get(username, 0)
+                    if latest_reel_media > 0 and latest_reel_media == cached_timestamp:
+                        skipped_unchanged += 1
+                        logger.debug(f"   ⏭️ {username}: 스토리 변경 없음 (timestamp={latest_reel_media}), API 스킵")
+                        continue
+
+                    # 캐시 업데이트
+                    if latest_reel_media > 0:
+                        self._latest_reel_cache[username] = latest_reel_media
+
+                    tray_targets.append(target)
+                    logger.debug(f"   ✅ 타겟 발견: {username} (timestamp: {cached_timestamp} -> {latest_reel_media})")
+
+            logger.info(f"📋 타겟 중 스토리 있는 사람: {len(tray_targets) + skipped_unchanged}명 (API 호출: {len(tray_targets)}명, 변경없어 스킵: {skipped_unchanged}명)")
+            if tray_targets:
+                logger.info(f"📋 API 호출 대상: {[t.username for t in tray_targets[:10]]}{'...' if len(tray_targets) > 10 else ''}")
 
             # Reels Tray에서 찾은 타겟들의 스토리를 개별 API로 가져오기
             if tray_targets:
@@ -557,6 +580,13 @@ class StoryMonitorV2(StoryMonitor):
             # Reels Tray에 없는 타겟 = 스토리 없음 (팔로우 중인 경우)
             missing_count = len(target_usernames) - len(found_targets)
             logger.info(f"📋 Reels Tray에 없는 {missing_count}명은 현재 스토리 없음 (스킵)")
+
+            # 캐시 정리: Reels Tray에 없는 사용자는 스토리가 만료됨
+            expired_cache = [u for u in self._latest_reel_cache if u not in found_targets]
+            for username in expired_cache:
+                del self._latest_reel_cache[username]
+            if expired_cache:
+                logger.debug(f"📋 캐시 정리: {len(expired_cache)}명 (스토리 만료)")
 
             logger.info(f"🏁 check_all_stories 완료: 총 {len(new_stories)}개 새 스토리")
 
