@@ -1,0 +1,19 @@
+[Unit]
+Description=Instagram Story Saver
+After=network.target
+
+[Service]
+Type=simple
+User=opc
+WorkingDirectory=/home/opc/rakko/instagram-story-saver
+Environment="PATH=/home/opc/rakko/insta_env/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/opc/rakko/insta_env/bin/python main.py
+Restart=always
+RestartSec=30
+
+# 로그
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
