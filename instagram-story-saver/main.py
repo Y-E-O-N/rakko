@@ -240,14 +240,15 @@ class InstagramStorySaver:
                 )
                 self.database.add_download(record)
 
-            # 알림
+            # 클라우드 업로드 (알림 전에 수행)
+            cloud_path = None
+            if self.cloud_storage:
+                cloud_path = self.cloud_storage.upload_story(task)
+
+            # 알림 (클라우드 경로 포함)
             notifier = self._get_notifier()
             if notifier and self.config.notify_download_complete:
-                notifier.notify_download_complete(task)
-
-            # 클라우드 업로드
-            if self.cloud_storage:
-                self.cloud_storage.upload_story(task)
+                notifier.notify_download_complete(task, cloud_path=cloud_path)
 
         # 다운로드 실패 시
         def on_download_failed(task: DownloadTask):

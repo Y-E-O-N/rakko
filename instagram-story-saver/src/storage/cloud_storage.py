@@ -187,23 +187,27 @@ class CloudStorage:
             logger.error(f"R2 업로드 실패: {e}")
             return False
     
-    def upload_story(self, task: DownloadTask) -> bool:
-        """스토리 파일 업로드"""
+    def upload_story(self, task: DownloadTask) -> Optional[str]:
+        """스토리 파일 업로드
+
+        Returns:
+            성공 시 클라우드 경로, 실패 시 None
+        """
         if not task.output_path.exists():
-            return False
-        
+            return None
+
         story = task.story
-        
+
         # 원격 경로: username/YYYY-MM/filename
         month_folder = story.taken_at.strftime('%Y-%m')
         remote_path = f"{story.username}/{month_folder}/{task.output_path.name}"
-        
+
         def safe_metadata(value: str, max_length: int = 200) -> str:
             if not value:
                 return ""
             encoded = urllib.parse.quote(str(value)[:max_length], safe='')
             return encoded[:500]
-        
+
         metadata = {
             'username': safe_metadata(story.username),
             'story_id': safe_metadata(story.story_id),
@@ -211,8 +215,9 @@ class CloudStorage:
             'taken_at': story.taken_at.isoformat(),
             'media_type': 'video' if story.is_video else 'image'
         }
-        
-        return self.upload_file(task.output_path, remote_path, metadata)
+
+        success = self.upload_file(task.output_path, remote_path, metadata)
+        return remote_path if success else None
     
     def test_connection(self) -> bool:
         """연결 테스트"""

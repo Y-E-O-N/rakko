@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from instagrapi import Client
 from instagrapi.types import Story
-from instagrapi.exceptions import ClientError, ClientConnectionError
+from instagrapi.exceptions import ClientError, ClientConnectionError, PleaseWaitFewMinutes
 from src.utils.logger import get_logger
 from src.utils.config import TargetUser, save_targets
 
@@ -412,32 +412,30 @@ class StoryMonitor:
         return new_stories
     
     def _check_user_stories(self, target: TargetUser) -> List[StoryItem]:
-        """개별 유저의 스토리 확인"""
+        """개별 유저의 스토리 확인
+
+        Raises:
+            Exception: API 호출 실패 시 예외를 상위로 전파
+        """
         stories = []
 
         logger.info(f"      🔍 _check_user_stories 호출: {target.username} (user_id: {target.user_id})")
 
-        try:
-            logger.info(f"      📡 client.user_stories({target.user_id}) 호출...")
-            user_stories = self.client.user_stories(target.user_id)
-            logger.info(f"      ✅ API 응답: {len(user_stories)}개 스토리")
+        logger.info(f"      📡 client.user_stories({target.user_id}) 호출...")
+        user_stories = self.client.user_stories(target.user_id)
+        logger.info(f"      ✅ API 응답: {len(user_stories)}개 스토리")
 
-            for idx, story in enumerate(user_stories):
-                logger.info(f"      📋 파싱 중: 스토리 {idx+1}/{len(user_stories)}, pk={story.pk}")
-                story_item = self._parse_story(story, target)
-                if story_item:
-                    if story_item.is_expired:
-                        logger.info(f"      ⏭️ 스토리 {story.pk}: 만료됨, 스킵")
-                    else:
-                        logger.info(f"      ✅ 스토리 {story.pk}: 유효, 추가")
-                        stories.append(story_item)
+        for idx, story in enumerate(user_stories):
+            logger.info(f"      📋 파싱 중: 스토리 {idx+1}/{len(user_stories)}, pk={story.pk}")
+            story_item = self._parse_story(story, target)
+            if story_item:
+                if story_item.is_expired:
+                    logger.info(f"      ⏭️ 스토리 {story.pk}: 만료됨, 스킵")
                 else:
-                    logger.warning(f"      ⚠️ 스토리 {story.pk}: 파싱 실패")
-
-        except Exception as e:
-            logger.error(f"      ❌ 스토리 조회 에러 ({target.username}): {e}")
-            import traceback
-            logger.error(f"      상세: {traceback.format_exc()}")
+                    logger.info(f"      ✅ 스토리 {story.pk}: 유효, 추가")
+                    stories.append(story_item)
+            else:
+                logger.warning(f"      ⚠️ 스토리 {story.pk}: 파싱 실패")
 
         logger.info(f"      🔍 _check_user_stories 완료: {len(stories)}개 반환")
         return stories
@@ -514,11 +512,63 @@ class StoryMonitorV2(StoryMonitor):
     팔로잉의 모든 스토리를 한 번에 가져와서 API 호출 최소화
     """
 
+    REEL_CACHE_FILE = "data/reel_cache.json"
+    CACHE_TTL_HOURS = 24  # 캐시 만료 시간 (시간 단위)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 사용자별 latest_reel_media 캐시 (username -> timestamp)
-        # 이 값이 변경되지 않으면 새 스토리가 없다는 의미
-        self._latest_reel_cache: Dict[str, int] = {}
+        # 사용자별 latest_reel_media 캐시
+        # username -> {"timestamp": latest_reel_media, "updated_at": unix_timestamp}
+        self._latest_reel_cache: Dict[str, Dict[str, int]] = {}
+        self._load_reel_cache()
+
+    def _load_reel_cache(self):
+        """파일에서 캐시 로드 (TTL 적용)"""
+        try:
+            cache_path = Path(self.REEL_CACHE_FILE)
+            if cache_path.exists():
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                raw_cache = data.get('cache', {})
+
+                # TTL 체크 및 마이그레이션
+                now = time.time()
+                ttl_seconds = self.CACHE_TTL_HOURS * 3600
+                valid_cache = {}
+                expired_count = 0
+
+                for username, value in raw_cache.items():
+                    # 이전 형식 (int) -> 새 형식 (dict) 마이그레이션
+                    if isinstance(value, int):
+                        value = {"timestamp": value, "updated_at": now}
+
+                    # TTL 체크: 24시간 이내만 유효
+                    updated_at = value.get("updated_at", 0)
+                    if now - updated_at < ttl_seconds:
+                        valid_cache[username] = value
+                    else:
+                        expired_count += 1
+
+                self._latest_reel_cache = valid_cache
+                logger.info(f"📂 캐시 로드됨: {len(valid_cache)}명 (TTL 만료: {expired_count}명)")
+        except Exception as e:
+            logger.warning(f"캐시 로드 실패: {e}")
+            self._latest_reel_cache = {}
+
+    def _save_reel_cache(self):
+        """캐시를 파일에 저장"""
+        try:
+            cache_path = Path(self.REEL_CACHE_FILE)
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                'cache': self._latest_reel_cache,
+                'last_updated': datetime.now().isoformat()
+            }
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"📂 캐시 저장됨: {len(self._latest_reel_cache)}명")
+        except Exception as e:
+            logger.warning(f"캐시 저장 실패: {e}")
 
     def check_all_stories(self) -> List[StoryItem]:
         """Reels Tray에서 스토리 확인 (실패 시 개별 API 폴백)"""
@@ -551,15 +601,15 @@ class StoryMonitorV2(StoryMonitor):
                     latest_reel_media = reel.get('latest_reel_media', 0)
 
                     # 캐시된 값과 비교: 변경 없으면 API 호출 스킵
-                    cached_timestamp = self._latest_reel_cache.get(username, 0)
+                    cached_entry = self._latest_reel_cache.get(username, {})
+                    cached_timestamp = cached_entry.get("timestamp", 0) if isinstance(cached_entry, dict) else cached_entry
                     if latest_reel_media > 0 and latest_reel_media == cached_timestamp:
                         skipped_unchanged += 1
                         logger.debug(f"   ⏭️ {username}: 스토리 변경 없음 (timestamp={latest_reel_media}), API 스킵")
                         continue
 
-                    # 캐시 업데이트
-                    if latest_reel_media > 0:
-                        self._latest_reel_cache[username] = latest_reel_media
+                    # timestamp를 target에 임시 저장 (API 호출 후 캐시 업데이트용)
+                    target._pending_timestamp = latest_reel_media
 
                     tray_targets.append(target)
                     logger.debug(f"   ✅ 타겟 발견: {username} (timestamp: {cached_timestamp} -> {latest_reel_media})")
@@ -581,12 +631,8 @@ class StoryMonitorV2(StoryMonitor):
             missing_count = len(target_usernames) - len(found_targets)
             logger.info(f"📋 Reels Tray에 없는 {missing_count}명은 현재 스토리 없음 (스킵)")
 
-            # 캐시 정리: Reels Tray에 없는 사용자는 스토리가 만료됨
-            expired_cache = [u for u in self._latest_reel_cache if u not in found_targets]
-            for username in expired_cache:
-                del self._latest_reel_cache[username]
-            if expired_cache:
-                logger.debug(f"📋 캐시 정리: {len(expired_cache)}명 (스토리 만료)")
+            # 캐시는 TTL(24시간) 기반으로만 만료됨
+            # Reels Tray 결과와 관계없이 캐시를 삭제하지 않음
 
             logger.info(f"🏁 check_all_stories 완료: 총 {len(new_stories)}개 새 스토리")
 
@@ -617,6 +663,7 @@ class StoryMonitorV2(StoryMonitor):
                 logger.warning(f"⚠️ [{i+1}/{len(targets)}] {target.username}: user_id 없음, 스킵")
                 continue
 
+            api_success = False
             try:
                 logger.info(f"🔍 [{i+1}/{len(targets)}] {target.username} API 호출 중...")
                 stories = self._check_user_stories(target)
@@ -653,18 +700,40 @@ class StoryMonitorV2(StoryMonitor):
                     self._emit('on_new_story', story)
                     logger.info(f"   ✅ on_new_story 이벤트 완료: {story.story_id}")
 
+                # API 호출 성공
+                api_success = True
+
+            except PleaseWaitFewMinutes as e:
+                logger.warning(f"⏳ Rate limit ({target.username}): {e}")
+                logger.warning("⏳ Rate limit 감지, 60초 대기 후 계속...")
+                time.sleep(60)
             except ClientConnectionError as e:
                 logger.warning(f"❌ 네트워크 오류 ({target.username}): {e}")
             except ClientError as e:
                 logger.warning(f"❌ API 오류 ({target.username}): {e}")
                 # Rate limit 감지 시 더 긴 대기
-                if "feedback_required" in str(e) or "rate" in str(e).lower():
-                    logger.warning("⏳ Rate limit 감지, 30초 대기...")
-                    time.sleep(30)
+                if "feedback_required" in str(e) or "rate" in str(e).lower() or "wait" in str(e).lower():
+                    logger.warning("⏳ Rate limit 감지, 60초 대기...")
+                    time.sleep(60)
             except Exception as e:
                 logger.error(f"❌ 스토리 체크 실패 ({target.username}): {e}")
                 import traceback
                 logger.error(f"   상세: {traceback.format_exc()}")
+
+            # API 호출 성공 시에만 캐시 업데이트 (실패 시 다음에 재시도)
+            if api_success:
+                pending_ts = getattr(target, '_pending_timestamp', 0)
+                if pending_ts > 0:
+                    self._latest_reel_cache[target.username.lower()] = {
+                        "timestamp": pending_ts,
+                        "updated_at": time.time()
+                    }
+                    logger.debug(f"   📂 캐시 업데이트: {target.username} -> {pending_ts}")
+
+                # 유저 처리 완료 후 캐시 저장 (중단 시에도 진행 상황 보존)
+                self._save_reel_cache()
+            else:
+                logger.debug(f"   ⏭️ 캐시 업데이트 스킵: {target.username} (API 실패)")
 
             # 개별 API 호출 사이 딜레이 (rate limit 방지)
             if i + 1 < len(targets):

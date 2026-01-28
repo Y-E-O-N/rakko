@@ -68,10 +68,12 @@ class DiscordNotifier:
         max_retries: int = 3,
         queue_size: int = 100,
         message_delay: float = 0.5,
-        request_timeout: int = 10
+        request_timeout: int = 10,
+        public_url: str = ""
     ):
         self.webhook_url = webhook_url
         self.enabled = enabled and bool(webhook_url)
+        self.public_url = public_url.rstrip('/') if public_url else ""
         self.max_retries = max_retries
         self.message_delay = message_delay
         self.request_timeout = request_timeout
@@ -238,19 +240,26 @@ class DiscordNotifier:
         )
         self.send_embed(embed)
 
-    def notify_download_complete(self, task):
+    def notify_download_complete(self, task, cloud_path: str = None):
         """다운로드 완료 알림"""
         story = task.story
         size = self._format_size(task.file_size)
+
+        fields = [
+            {'name': '파일 크기', 'value': size, 'inline': True},
+            {'name': '파일명', 'value': task.output_path.name, 'inline': False},
+        ]
+
+        # 클라우드 다운로드 링크 추가
+        if self.public_url and cloud_path:
+            download_url = f"{self.public_url}/{cloud_path}"
+            fields.append({'name': '다운로드', 'value': f'[링크]({download_url})', 'inline': False})
 
         embed = DiscordEmbed(
             title="다운로드 완료",
             description=f"**{self._escape_markdown(story.display_name)}** (@{story.username})",
             color=self.COLOR_GREEN,
-            fields=[
-                {'name': '파일 크기', 'value': size, 'inline': True},
-                {'name': '파일명', 'value': task.output_path.name, 'inline': False},
-            ],
+            fields=fields,
             timestamp=True
         )
         self.send_embed(embed)
@@ -405,11 +414,15 @@ def create_discord_notifier(config) -> Optional[DiscordNotifier]:
         logger.warning("Discord Webhook URL이 설정되지 않았습니다")
         return None
 
+    # R2 public URL 가져오기
+    public_url = getattr(config, 'r2_public_url', '') or ''
+
     return DiscordNotifier(
         webhook_url=webhook_url,
         enabled=True,
         max_retries=config.discord_max_retries,
         queue_size=config.discord_queue_size,
         message_delay=config.discord_message_delay,
-        request_timeout=config.discord_request_timeout
+        request_timeout=config.discord_request_timeout,
+        public_url=public_url
     )
