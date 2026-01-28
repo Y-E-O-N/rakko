@@ -16,6 +16,8 @@ data/sessions/
 *.session
 *.session.json
 session.json
+session_local.json
+create_session.py
 
 # ============================================
 # 데이터 파일
