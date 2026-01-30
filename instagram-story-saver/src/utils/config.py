@@ -4,7 +4,7 @@
 환경 변수 지원:
 - IG_USERNAME, IG_PASSWORD, IG_TOTP_SECRET
 - TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-- R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY
+- R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 """
 import os
 import re
@@ -232,7 +232,8 @@ class Config:
             'discord_webhook_url': '***' if self.discord_webhook_url else '',
             'r2_access_key': '***' if self.r2_access_key else '',
             'r2_secret_key': '***' if self.r2_secret_key else '',
-            'check_interval': self.check_interval,
+            'check_interval_min': self.check_interval_min,
+            'check_interval_max': self.check_interval_max,
             'targets_count': len(self.targets),
         }
 
@@ -286,11 +287,11 @@ def load_config(config_path: str = "config/settings.yaml") -> Config:
     )
     r2_access_key = _resolve_value(
         data.get('cloud_storage', {}).get('r2', {}).get('access_key_id', ''),
-        'R2_ACCESS_KEY'
+        'R2_ACCESS_KEY_ID'
     )
     r2_secret_key = _resolve_value(
         data.get('cloud_storage', {}).get('r2', {}).get('secret_access_key', ''),
-        'R2_SECRET_KEY'
+        'R2_SECRET_ACCESS_KEY'
     )
     
     config = Config(
