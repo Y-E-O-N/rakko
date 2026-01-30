@@ -5,7 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=opc
-WorkingDirectory=/home/opc/instagram-story-saver
+WorkingDirectory=/home/opc/rakko/instagram-story-saver
+EnvironmentFile=/etc/instagram-story-saver.env
 Environment="PATH=/home/opc/rakko/insta_env/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStart=/home/opc/rakko/insta_env/bin/uvicorn api:app --host 0.0.0.0 --port 8000
 Restart=always
