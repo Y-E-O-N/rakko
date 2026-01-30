@@ -22,6 +22,7 @@ TODO.md
 *.session
 *.session.json
 session.json
+session_local.json
 
 # ============================================
 # 데이터 파일
