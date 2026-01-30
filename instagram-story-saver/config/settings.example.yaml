@@ -87,8 +87,8 @@ cloud_storage:
   provider: "r2"
   r2:
     account_id: "${R2_ACCOUNT_ID}"
-    access_key_id: "${R2_ACCESS_KEY}"
-    secret_access_key: "${R2_SECRET_KEY}"
+    access_key_id: "${R2_ACCESS_KEY_ID}"
+    secret_access_key: "${R2_SECRET_ACCESS_KEY}"
     bucket_name: "instagram-stories"
     # 퍼블릭 URL (선택사항)
     public_url: ""
