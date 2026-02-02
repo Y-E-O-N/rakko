@@ -265,7 +265,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .section-title {
@@ -274,119 +274,415 @@
             margin-bottom: 16px;
             color: #333;
         }
+
+        .targets-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            margin-top: 12px;
+        }
+
+        .targets-list {
+            display: none;
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .targets-list.show {
+            display: block;
+        }
+
+        .target-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .target-item:last-child {
+            border-bottom: none;
+        }
+
+        .target-item:hover {
+            background: #f8f9fa;
+        }
+
+        .target-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .target-name {
+            font-size: 14px;
+            color: #333;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .target-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .target-action-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .target-action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: none;
+        }
+
+        .favorite-btn {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .favorite-btn.active {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .move-btn {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .delete-btn {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .targets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 10px 10px 0 0;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+        }
+
+        .targets-header span {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .targets-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            color: #666;
+        }
+
+        .targets-close:hover {
+            color: #333;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .add-target-form {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #fff;
+        }
+
+        .add-target-form input {
+            flex: 1;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+
+        .add-target-form button {
+            width: auto;
+            padding: 10px 16px;
+            font-size: 14px;
+        }
+
+        .back-btn {
+            background: #6c757d;
+            margin-bottom: 16px;
+        }
+
+        /* Page Auth Styles */
+        .page-auth-card {
+            text-align: center;
+        }
+
+        .page-auth-card h2 {
+            margin-bottom: 24px;
+            color: #333;
+        }
+
+        .lock-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Instagram Story Saver</h1>
 
-        <!-- Login Section -->
-        <div class="card" id="loginSection">
-            <div class="status-bar">
-                <span>
-                    <span class="status-dot" id="statusDot"></span>
-                    <span id="statusText">Checking...</span>
-                </span>
-            </div>
-
-            <div id="loginForm" class="hidden">
-                <div class="section-title">Instagram Login</div>
-                <div class="input-group">
-                    <label for="igUsername">Username</label>
-                    <input type="text" id="igUsername" placeholder="Instagram username" autocomplete="new-username" autocapitalize="off" value="">
-                </div>
-                <div class="input-group">
-                    <label for="igPassword">Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="igPassword" placeholder="Instagram password" autocomplete="new-password" value="">
-                        <button type="button" class="password-toggle" onclick="togglePassword()">
-                            <span id="eyeIcon">👁</span>
-                        </button>
-                    </div>
-                </div>
-                <button id="loginBtn" onclick="doLogin()">Login</button>
-                <div class="loading" id="loginLoading">
-                    <div class="spinner"></div>
-                    <p>Logging in...</p>
-                </div>
-                <div id="loginMessage"></div>
-
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                    <div class="section-title" style="font-size: 14px; color: #666;">Or Upload Session</div>
-                    <p class="hint" style="margin-bottom: 12px;">서버 IP가 차단된 경우, Termux/PC에서 생성한 세션을 업로드하세요</p>
-
-                    <input type="file" id="sessionFile" accept=".json" style="display: none;" onchange="uploadSession()">
-                    <button type="button" onclick="document.getElementById('sessionFile').click()" style="background: #6c757d; margin-bottom: 10px;">
-                        Upload Session File
+        <!-- Page Auth Section -->
+        <div class="card page-auth-card" id="pageAuthSection">
+            <div class="lock-icon">🔒</div>
+            <h2>Password Required</h2>
+            <div class="input-group">
+                <div class="password-wrapper">
+                    <input type="password" id="pagePassword" placeholder="Enter password" autocomplete="off">
+                    <button type="button" class="password-toggle" onclick="togglePagePassword()">
+                        <span id="pageEyeIcon">👁</span>
                     </button>
-
-                    <button type="button" onclick="toggleJsonInput()" style="background: #17a2b8;">
-                        Paste Session JSON
-                    </button>
-
-                    <div id="jsonInputArea" style="display: none; margin-top: 12px;">
-                        <textarea id="sessionJson" placeholder='{"uuids": {...}, "cookies": {...}, ...}' style="width: 100%; height: 120px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 12px; font-family: monospace; resize: vertical;"></textarea>
-                        <button type="button" onclick="submitSessionJson()" style="background: #28a745; margin-top: 8px;">
-                            Submit JSON
-                        </button>
-                    </div>
-
-                    <button type="button" onclick="toggleCookieInput()" style="background: #fd7e14; margin-top: 10px;">
-                        Quick: Enter sessionid Only
-                    </button>
-
-                    <div id="cookieInputArea" style="display: none; margin-top: 12px;">
-                        <p class="hint" style="margin-bottom: 8px;">Instagram 웹 로그인 후 쿠키에서 추출한 값 입력</p>
-                        <div class="input-group">
-                            <label style="font-size: 12px;">sessionid</label>
-                            <input type="text" id="cookieSessionId" placeholder="123456789%3Axxxxx%3A12" style="font-size: 12px;">
-                        </div>
-                        <div class="input-group">
-                            <label style="font-size: 12px;">ds_user_id</label>
-                            <input type="text" id="cookieDsUserId" placeholder="123456789" style="font-size: 12px;">
-                        </div>
-                        <div class="input-group">
-                            <label style="font-size: 12px;">csrftoken</label>
-                            <input type="text" id="cookieCsrf" placeholder="xxxxxxx" style="font-size: 12px;">
-                        </div>
-                        <button type="button" onclick="submitCookies()" style="background: #28a745; margin-top: 8px;">
-                            Submit Cookies
-                        </button>
-                    </div>
                 </div>
             </div>
+            <button id="pageAuthBtn" onclick="doPageAuth()">Enter</button>
+            <div class="loading" id="pageAuthLoading">
+                <div class="spinner"></div>
+            </div>
+            <div id="pageAuthMessage"></div>
         </div>
 
-        <!-- Story Search Section -->
-        <div class="card hidden" id="storySection">
-            <div class="section-title">Search Stories</div>
-            <div class="input-group">
-                <label for="input">Username</label>
-                <input type="text" id="input" placeholder="username" autocomplete="off" autocapitalize="off">
-                <p class="hint">@ 없이 유저명만 입력하세요</p>
+        <!-- Main Content (hidden until authenticated) -->
+        <div id="mainContent" class="hidden">
+            <!-- Login Section -->
+            <div class="card" id="loginSection">
+                <div class="status-bar">
+                    <span>
+                        <span class="status-dot" id="statusDot"></span>
+                        <span id="statusText">Checking...</span>
+                    </span>
+                </div>
+
+                <div id="loginForm" class="hidden">
+                    <div class="section-title">Instagram Login</div>
+                    <div class="input-group">
+                        <label for="igUsername">Username</label>
+                        <input type="text" id="igUsername" placeholder="Instagram username" autocomplete="new-username" autocapitalize="off" value="">
+                    </div>
+                    <div class="input-group">
+                        <label for="igPassword">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="igPassword" placeholder="Instagram password" autocomplete="new-password" value="">
+                            <button type="button" class="password-toggle" onclick="togglePassword()">
+                                <span id="eyeIcon">👁</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="loginBtn" onclick="doLogin()">Login</button>
+                    <div class="loading" id="loginLoading">
+                        <div class="spinner"></div>
+                        <p>Logging in...</p>
+                    </div>
+                    <div id="loginMessage"></div>
+
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                        <div class="section-title" style="font-size: 14px; color: #666;">Or Upload Session</div>
+                        <p class="hint" style="margin-bottom: 12px;">IP blocked? Upload session from Termux/PC</p>
+
+                        <input type="file" id="sessionFile" accept=".json" style="display: none;" onchange="uploadSession()">
+                        <button type="button" onclick="document.getElementById('sessionFile').click()" style="background: #6c757d; margin-bottom: 10px;">
+                            Upload Session File
+                        </button>
+
+                        <button type="button" onclick="toggleJsonInput()" style="background: #17a2b8;">
+                            Paste Session JSON
+                        </button>
+
+                        <div id="jsonInputArea" style="display: none; margin-top: 12px;">
+                            <textarea id="sessionJson" placeholder='{"uuids": {...}, "cookies": {...}, ...}' style="width: 100%; height: 120px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 12px; font-family: monospace; resize: vertical;"></textarea>
+                            <button type="button" onclick="submitSessionJson()" style="background: #28a745; margin-top: 8px;">
+                                Submit JSON
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="toggleCookieInput()" style="background: #fd7e14; margin-top: 10px;">
+                            Quick: Enter sessionid Only
+                        </button>
+
+                        <div id="cookieInputArea" style="display: none; margin-top: 12px;">
+                            <p class="hint" style="margin-bottom: 8px;">Extract cookies from Instagram web login</p>
+                            <div class="input-group">
+                                <label style="font-size: 12px;">sessionid</label>
+                                <input type="text" id="cookieSessionId" placeholder="123456789%3Axxxxx%3A12" style="font-size: 12px;">
+                            </div>
+                            <div class="input-group">
+                                <label style="font-size: 12px;">ds_user_id</label>
+                                <input type="text" id="cookieDsUserId" placeholder="123456789" style="font-size: 12px;">
+                            </div>
+                            <div class="input-group">
+                                <label style="font-size: 12px;">csrftoken</label>
+                                <input type="text" id="cookieCsrf" placeholder="xxxxxxx" style="font-size: 12px;">
+                            </div>
+                            <button type="button" onclick="submitCookies()" style="background: #28a745; margin-top: 8px;">
+                                Submit Cookies
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <button id="searchBtn" onclick="getStories()">Get Stories</button>
+            <!-- Story Search Section -->
+            <div class="card hidden" id="storySection">
+                <button class="back-btn hidden" id="backBtn" onclick="showSearchView()">Back to Search</button>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Loading stories...</p>
+                <div id="searchView">
+                    <div class="section-title">Search Stories</div>
+                    <div class="input-group">
+                        <label for="input">Username</label>
+                        <input type="text" id="input" placeholder="username" autocomplete="off" autocapitalize="off">
+                        <p class="hint">Enter username without @</p>
+                    </div>
+
+                    <button id="searchBtn" onclick="getStories()">Get Stories</button>
+
+                    <button class="targets-btn" onclick="toggleTargets()">Follower List</button>
+
+                    <div class="targets-list" id="targetsList">
+                        <div class="targets-header">
+                            <span id="targetsCount">Followers (0)</span>
+                            <button class="targets-close" onclick="toggleTargets()">×</button>
+                        </div>
+                        <div class="add-target-form">
+                            <input type="text" id="newTargetInput" placeholder="Add username..." autocomplete="off" autocapitalize="off">
+                            <button onclick="addTarget()">Add</button>
+                        </div>
+                        <div id="targetsContent"></div>
+                    </div>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Loading stories...</p>
+                </div>
+
+                <div id="message"></div>
+                <div class="results" id="results"></div>
             </div>
-
-            <div id="message"></div>
-            <div class="results" id="results"></div>
         </div>
     </div>
 
     <script>
         const API_BASE = window.location.origin;
         let isLoggedIn = false;
+        let isPageAuthenticated = false;
         let currentStories = [];
+        let targetsLoaded = false;
+        let currentTargets = [];
 
-        // Check login status on page load
+        // ========== Page Authentication ==========
+        async function checkPageAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/check`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (!data.required || data.authenticated) {
+                    isPageAuthenticated = true;
+                    showMainContent();
+                } else {
+                    document.getElementById('pageAuthSection').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                document.getElementById('pageAuthSection').classList.remove('hidden');
+            }
+        }
+
+        async function doPageAuth() {
+            const password = document.getElementById('pagePassword').value;
+            if (!password) {
+                showPageAuthMessage('Please enter password', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('pageAuthBtn');
+            const loading = document.getElementById('pageAuthLoading');
+
+            btn.disabled = true;
+            loading.classList.add('show');
+            document.getElementById('pageAuthMessage').innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Authentication failed');
+                }
+
+                isPageAuthenticated = true;
+                showMainContent();
+
+            } catch (error) {
+                showPageAuthMessage(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('show');
+            }
+        }
+
+        function showPageAuthMessage(text, type) {
+            document.getElementById('pageAuthMessage').innerHTML = `<div class="${type}">${text}</div>`;
+        }
+
+        function togglePagePassword() {
+            const input = document.getElementById('pagePassword');
+            const icon = document.getElementById('pageEyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                icon.textContent = '👁';
+            }
+        }
+
+        function showMainContent() {
+            document.getElementById('pageAuthSection').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            checkStatus();
+        }
+
+        // ========== Instagram Auth ==========
         async function checkStatus() {
             try {
-                const response = await fetch(`${API_BASE}/api/health`);
+                const response = await fetch(`${API_BASE}/api/health`, { credentials: 'include' });
                 const data = await response.json();
 
                 isLoggedIn = data.instagram_logged_in;
@@ -436,10 +732,9 @@
             try {
                 const response = await fetch(`${API_BASE}/api/login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
@@ -451,8 +746,6 @@
                 showLoginMessage(data.message, 'success');
                 isLoggedIn = true;
                 updateUI();
-
-                // Clear password field
                 document.getElementById('igPassword').value = '';
 
             } catch (error) {
@@ -464,8 +757,7 @@
         }
 
         function showLoginMessage(text, type) {
-            const msgDiv = document.getElementById('loginMessage');
-            msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
+            document.getElementById('loginMessage').innerHTML = `<div class="${type}">${text}</div>`;
         }
 
         function togglePassword() {
@@ -483,7 +775,6 @@
         async function uploadSession() {
             const fileInput = document.getElementById('sessionFile');
             const file = fileInput.files[0];
-
             if (!file) return;
 
             const loading = document.getElementById('loginLoading');
@@ -496,19 +787,16 @@
 
                 const response = await fetch(`${API_BASE}/api/upload-session`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Upload failed');
-                }
+                if (!response.ok) throw new Error(data.detail || 'Upload failed');
 
                 showLoginMessage(data.message, 'success');
                 isLoggedIn = true;
                 updateUI();
-
             } catch (error) {
                 showLoginMessage(error.message, 'error');
             } finally {
@@ -533,7 +821,7 @@
             const csrfToken = document.getElementById('cookieCsrf').value.trim();
 
             if (!sessionId || !dsUserId) {
-                showLoginMessage('sessionid와 ds_user_id는 필수입니다', 'error');
+                showLoginMessage('sessionid and ds_user_id are required', 'error');
                 return;
             }
 
@@ -545,29 +833,21 @@
                 const response = await fetch(`${API_BASE}/api/login-with-cookies`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sessionid: sessionId,
-                        ds_user_id: dsUserId,
-                        csrftoken: csrfToken
-                    })
+                    body: JSON.stringify({ sessionid: sessionId, ds_user_id: dsUserId, csrftoken: csrfToken }),
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Login failed');
-                }
+                if (!response.ok) throw new Error(data.detail || 'Login failed');
 
                 showLoginMessage(data.message, 'success');
                 isLoggedIn = true;
                 updateUI();
 
-                // Clear inputs
                 document.getElementById('cookieSessionId').value = '';
                 document.getElementById('cookieDsUserId').value = '';
                 document.getElementById('cookieCsrf').value = '';
                 document.getElementById('cookieInputArea').style.display = 'none';
-
             } catch (error) {
                 showLoginMessage(error.message, 'error');
             } finally {
@@ -577,17 +857,15 @@
 
         async function submitSessionJson() {
             const jsonText = document.getElementById('sessionJson').value.trim();
-
             if (!jsonText) {
-                showLoginMessage('JSON을 입력하세요', 'error');
+                showLoginMessage('Please enter JSON', 'error');
                 return;
             }
 
-            // Validate JSON
             try {
                 JSON.parse(jsonText);
             } catch (e) {
-                showLoginMessage('유효하지 않은 JSON 형식입니다', 'error');
+                showLoginMessage('Invalid JSON format', 'error');
                 return;
             }
 
@@ -596,30 +874,25 @@
             document.getElementById('loginMessage').innerHTML = '';
 
             try {
-                // Create a blob from the JSON text
                 const blob = new Blob([jsonText], { type: 'application/json' });
                 const formData = new FormData();
                 formData.append('file', blob, 'session.json');
 
                 const response = await fetch(`${API_BASE}/api/upload-session`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Upload failed');
-                }
+                if (!response.ok) throw new Error(data.detail || 'Upload failed');
 
                 showLoginMessage(data.message, 'success');
                 isLoggedIn = true;
                 updateUI();
 
-                // Clear the textarea
                 document.getElementById('sessionJson').value = '';
                 document.getElementById('jsonInputArea').style.display = 'none';
-
             } catch (error) {
                 showLoginMessage(error.message, 'error');
             } finally {
@@ -627,16 +900,179 @@
             }
         }
 
-        function parseInput(input) {
-            input = input.trim();
+        // ========== Targets Management ==========
+        async function toggleTargets() {
+            const list = document.getElementById('targetsList');
+            const isShowing = list.classList.contains('show');
 
-            const storyUrlPattern = /instagram\.com\/stories\/([^\/]+)/i;
-            const match = input.match(storyUrlPattern);
-
-            if (match) {
-                return match[1];
+            if (isShowing) {
+                list.classList.remove('show');
+                return;
             }
 
+            await loadTargets();
+            list.classList.add('show');
+        }
+
+        async function loadTargets() {
+            const content = document.getElementById('targetsContent');
+            content.innerHTML = '<div style="padding: 20px; text-align: center;"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/targets`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || 'Failed to load targets');
+
+                currentTargets = data.targets;
+                document.getElementById('targetsCount').textContent = `Followers (${data.total_count})`;
+                renderTargets();
+                targetsLoaded = true;
+            } catch (error) {
+                content.innerHTML = `<div style="padding: 20px; text-align: center; color: #c00;">${error.message}</div>`;
+            }
+        }
+
+        function renderTargets() {
+            const content = document.getElementById('targetsContent');
+
+            if (currentTargets.length === 0) {
+                content.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No followers in list</div>';
+                return;
+            }
+
+            content.innerHTML = currentTargets.map((target, index) => `
+                <div class="target-item" data-username="${target.username}" data-index="${index}">
+                    <div class="target-avatar" onclick="selectTarget('${target.username}')">${target.username.charAt(0).toUpperCase()}</div>
+                    <span class="target-name" onclick="selectTarget('${target.username}')">${target.username}</span>
+                    <div class="target-actions">
+                        <button class="target-action-btn favorite-btn ${target.favorite ? 'active' : ''}" onclick="toggleFavorite('${target.username}')" title="Favorite">★</button>
+                        <button class="target-action-btn move-btn" onclick="moveTarget('${target.username}', -1)" title="Move up" ${index === 0 ? 'disabled' : ''}>▲</button>
+                        <button class="target-action-btn move-btn" onclick="moveTarget('${target.username}', 1)" title="Move down" ${index === currentTargets.length - 1 ? 'disabled' : ''}>▼</button>
+                        <button class="target-action-btn delete-btn" onclick="deleteTarget('${target.username}')" title="Delete">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addTarget() {
+            const input = document.getElementById('newTargetInput');
+            const username = input.value.trim().toLowerCase().replace(/^@/, '');
+
+            if (!username) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/targets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed to add');
+
+                currentTargets = data.targets;
+                document.getElementById('targetsCount').textContent = `Followers (${data.total_count})`;
+                renderTargets();
+                input.value = '';
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function deleteTarget(username) {
+            if (!confirm(`Delete ${username}?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/targets/${encodeURIComponent(username)}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed to delete');
+
+                currentTargets = currentTargets.filter(t => t.username.toLowerCase() !== username.toLowerCase());
+                document.getElementById('targetsCount').textContent = `Followers (${currentTargets.length})`;
+                renderTargets();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function toggleFavorite(username) {
+            try {
+                const response = await fetch(`${API_BASE}/api/targets/${encodeURIComponent(username)}/favorite`, {
+                    method: 'PATCH',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed to toggle favorite');
+
+                // Update local state and re-sort
+                const target = currentTargets.find(t => t.username.toLowerCase() === username.toLowerCase());
+                if (target) {
+                    target.favorite = data.favorite;
+                    // Re-sort: favorites first, then by order
+                    currentTargets.sort((a, b) => {
+                        if (a.favorite !== b.favorite) return b.favorite - a.favorite;
+                        return a.order - b.order;
+                    });
+                    renderTargets();
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function moveTarget(username, direction) {
+            const index = currentTargets.findIndex(t => t.username.toLowerCase() === username.toLowerCase());
+            if (index === -1) return;
+
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= currentTargets.length) return;
+
+            // Swap in local array
+            [currentTargets[index], currentTargets[newIndex]] = [currentTargets[newIndex], currentTargets[index]];
+
+            // Update order values
+            currentTargets.forEach((t, i) => t.order = i);
+
+            renderTargets();
+
+            // Send to server
+            try {
+                const response = await fetch(`${API_BASE}/api/targets/reorder`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames: currentTargets.map(t => t.username) }),
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to reorder');
+                }
+            } catch (error) {
+                console.error('Reorder failed:', error);
+                loadTargets(); // Reload from server on error
+            }
+        }
+
+        function selectTarget(username) {
+            document.getElementById('input').value = username;
+            document.getElementById('targetsList').classList.remove('show');
+            getStories();
+        }
+
+        // ========== Story Search ==========
+        function parseInput(input) {
+            input = input.trim();
+            const storyUrlPattern = /instagram\.com\/stories\/([^\/]+)/i;
+            const match = input.match(storyUrlPattern);
+            if (match) return match[1];
             return input.replace(/^@/, '');
         }
 
@@ -658,26 +1094,25 @@
             results.innerHTML = '';
             document.getElementById('message').innerHTML = '';
 
+            document.getElementById('searchView').style.display = 'none';
+            document.getElementById('backBtn').classList.remove('hidden');
+
             try {
-                const response = await fetch(`${API_BASE}/api/story?username=${encodeURIComponent(username)}`);
+                const response = await fetch(`${API_BASE}/api/story?username=${encodeURIComponent(username)}`, { credentials: 'include' });
                 const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Failed to get stories');
-                }
+                if (!response.ok) throw new Error(data.detail || 'Failed to get stories');
 
                 if (data.total_count === 0) {
-                    showMessage(data.message || 'No stories found', 'success');
+                    showMessage(`@${username}: ${data.message || 'No stories found'}`, 'success');
                 } else {
                     showMessage(`${data.total_count} stories found!`, 'success');
-                    displayResults(data.stories);
+                    displayResults(data.stories, username);
                 }
-
             } catch (error) {
                 showMessage(error.message, 'error');
 
-                // Check if session expired
-                if (error.message.includes('로그인') || error.message.includes('login')) {
+                if (error.message.includes('login') || error.message.includes('로그인')) {
                     isLoggedIn = false;
                     updateUI();
                 }
@@ -688,15 +1123,17 @@
         }
 
         function showMessage(text, type) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
+            document.getElementById('message').innerHTML = `<div class="${type}">${text}</div>`;
         }
 
-        function displayResults(stories) {
+        function displayResults(stories, username) {
             const results = document.getElementById('results');
             currentStories = stories;
 
-            // Add "Save All" button if multiple stories
+            const headerDiv = document.createElement('div');
+            headerDiv.innerHTML = `<div class="section-title" style="margin-bottom: 16px;">@${username}</div>`;
+            results.appendChild(headerDiv);
+
             if (stories.length > 1) {
                 const saveAllDiv = document.createElement('div');
                 saveAllDiv.innerHTML = `
@@ -746,14 +1183,10 @@
                 const story = currentStories[i];
                 progress.textContent = `Saving ${i + 1} / ${currentStories.length}...`;
 
-                // Highlight current item
                 const item = document.getElementById(`story-${i}`);
-                if (item) {
-                    item.style.border = '2px solid #ee5a24';
-                }
+                if (item) item.style.border = '2px solid #ee5a24';
 
                 try {
-                    // Open download in new tab
                     const link = document.createElement('a');
                     link.href = story.download_url;
                     link.target = '_blank';
@@ -761,18 +1194,12 @@
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-
-                    // Wait between downloads to avoid browser blocking
                     await new Promise(resolve => setTimeout(resolve, 1000));
-
                 } catch (e) {
                     console.error('Download failed:', e);
                 }
 
-                // Remove highlight
-                if (item) {
-                    item.style.border = '';
-                }
+                if (item) item.style.border = '';
             }
 
             progress.textContent = 'Done! Check your downloads.';
@@ -780,21 +1207,32 @@
             btn.disabled = false;
         }
 
-        // Enter key support
+        function showSearchView() {
+            document.getElementById('backBtn').classList.add('hidden');
+            document.getElementById('searchView').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('message').innerHTML = '';
+        }
+
+        // ========== Event Listeners ==========
         document.getElementById('input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                getStories();
-            }
+            if (e.key === 'Enter') getStories();
         });
 
         document.getElementById('igPassword').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                doLogin();
-            }
+            if (e.key === 'Enter') doLogin();
         });
 
-        // Check status on page load
-        checkStatus();
+        document.getElementById('pagePassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') doPageAuth();
+        });
+
+        document.getElementById('newTargetInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTarget();
+        });
+
+        // ========== Initialize ==========
+        checkPageAuth();
     </script>
 </body>
 </html>
