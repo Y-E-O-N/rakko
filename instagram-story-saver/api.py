@@ -13,12 +13,13 @@ Instagram Story API
 """
 
 import os
+import secrets
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Depends, Security, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, Depends, Security, UploadFile, File, Cookie, Response
 from fastapi.security import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,8 +44,21 @@ config: Optional[Config] = None
 ig_client: Optional[Client] = None
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+# Page authentication
+PAGE_PASSWORD = os.environ.get("PAGE_PASSWORD", "")
+auth_tokens: set = set()  # Valid session tokens
+
 
 # Request/Response Models
+class PageAuthRequest(BaseModel):
+    password: str
+
+
+class PageAuthResponse(BaseModel):
+    success: bool
+    message: str
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -82,6 +96,26 @@ class HealthResponse(BaseModel):
     status: str
     instagram_logged_in: bool
     timestamp: str
+
+
+class TargetItem(BaseModel):
+    username: str
+    favorite: bool = False
+    order: int = 0
+
+
+class TargetsResponse(BaseModel):
+    success: bool
+    targets: List[TargetItem]
+    total_count: int
+
+
+class AddTargetRequest(BaseModel):
+    username: str
+
+
+class ReorderTargetsRequest(BaseModel):
+    usernames: List[str]  # 새로운 순서대로 정렬된 유저네임 리스트
 
 
 def try_login_with_session() -> bool:
@@ -161,6 +195,40 @@ async def root():
     return {"message": "Instagram Story API", "docs": "/docs"}
 
 
+@app.get("/api/auth/check")
+async def check_page_auth(auth_token: Optional[str] = Cookie(None)):
+    """페이지 인증 상태 확인"""
+    if not PAGE_PASSWORD:
+        return {"authenticated": True, "required": False}
+    authenticated = auth_token in auth_tokens if auth_token else False
+    return {"authenticated": authenticated, "required": True}
+
+
+@app.post("/api/auth", response_model=PageAuthResponse)
+async def page_auth(request: PageAuthRequest, response: Response):
+    """페이지 비밀번호 인증"""
+    if not PAGE_PASSWORD:
+        return PageAuthResponse(success=True, message="인증이 필요하지 않습니다")
+
+    if request.password != PAGE_PASSWORD:
+        raise HTTPException(status_code=401, detail="비밀번호가 틀렸습니다")
+
+    # 새 토큰 생성
+    token = secrets.token_urlsafe(32)
+    auth_tokens.add(token)
+
+    # 쿠키 설정 (7일 유효)
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        max_age=7 * 24 * 60 * 60,
+        httponly=True,
+        samesite="lax"
+    )
+
+    return PageAuthResponse(success=True, message="인증 성공")
+
+
 def verify_api_key(api_key: str = Security(api_key_header)) -> bool:
     """API 키 검증 (선택사항)"""
     expected_key = os.environ.get("API_KEY", "")
@@ -169,6 +237,53 @@ def verify_api_key(api_key: str = Security(api_key_header)) -> bool:
     if api_key != expected_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
     return True
+
+
+def verify_page_auth(auth_token: Optional[str] = Cookie(None)) -> bool:
+    """페이지 인증 확인"""
+    if not PAGE_PASSWORD:
+        return True  # 비밀번호 미설정 시 인증 불필요
+    if not auth_token or auth_token not in auth_tokens:
+        raise HTTPException(status_code=401, detail="Page authentication required")
+    return True
+
+
+def get_targets_file() -> Path:
+    """targets.json 파일 경로 반환"""
+    return Path(__file__).parent.parent / "targets.json"
+
+
+def load_targets() -> List[dict]:
+    """targets 파일 로드 (txt 또는 json 지원)"""
+    targets_file = get_targets_file()
+    txt_file = Path(__file__).parent.parent / "targets.txt"
+
+    # JSON 파일이 있으면 사용
+    if targets_file.exists():
+        try:
+            data = json.loads(targets_file.read_text(encoding='utf-8'))
+            return data.get('targets', [])
+        except:
+            pass
+
+    # txt 파일에서 마이그레이션
+    if txt_file.exists():
+        try:
+            content = txt_file.read_text(encoding='utf-8')
+            usernames = [t.strip() for t in content.replace('\n', ',').split(',') if t.strip()]
+            targets = [{"username": u, "favorite": False, "order": i} for i, u in enumerate(usernames)]
+            save_targets(targets)
+            return targets
+        except:
+            pass
+
+    return []
+
+
+def save_targets(targets: List[dict]) -> None:
+    """targets 파일 저장"""
+    targets_file = get_targets_file()
+    targets_file.write_text(json.dumps({"targets": targets}, indent=2, ensure_ascii=False), encoding='utf-8')
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -188,6 +303,119 @@ async def health_check():
         instagram_logged_in=ig_logged_in,
         timestamp=datetime.now().isoformat()
     )
+
+
+@app.get("/api/targets", response_model=TargetsResponse)
+async def get_targets(_: bool = Depends(verify_page_auth)):
+    """팔로워 목록 조회 (즐겨찾기 우선, 순서대로 정렬)"""
+    try:
+        targets = load_targets()
+        # 즐겨찾기 우선, 그다음 order 순으로 정렬
+        sorted_targets = sorted(targets, key=lambda x: (not x.get('favorite', False), x.get('order', 999)))
+        target_items = [TargetItem(**t) for t in sorted_targets]
+        return TargetsResponse(success=True, targets=target_items, total_count=len(target_items))
+    except Exception as e:
+        logger.error(f"targets 읽기 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"파일 읽기 실패: {str(e)}")
+
+
+@app.post("/api/targets", response_model=TargetsResponse)
+async def add_target(request: AddTargetRequest, _: bool = Depends(verify_page_auth)):
+    """팔로워 추가"""
+    username = request.username.strip().lower().lstrip("@")
+    if not username:
+        raise HTTPException(status_code=400, detail="유저네임을 입력하세요")
+
+    try:
+        targets = load_targets()
+
+        # 중복 체크
+        if any(t['username'].lower() == username for t in targets):
+            raise HTTPException(status_code=400, detail="이미 존재하는 유저입니다")
+
+        # 새 유저 추가 (맨 뒤 순서)
+        max_order = max((t.get('order', 0) for t in targets), default=-1)
+        targets.append({"username": username, "favorite": False, "order": max_order + 1})
+        save_targets(targets)
+
+        # 정렬된 목록 반환
+        sorted_targets = sorted(targets, key=lambda x: (not x.get('favorite', False), x.get('order', 999)))
+        target_items = [TargetItem(**t) for t in sorted_targets]
+        return TargetsResponse(success=True, targets=target_items, total_count=len(target_items))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"target 추가 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/targets/{username}")
+async def delete_target(username: str, _: bool = Depends(verify_page_auth)):
+    """팔로워 삭제"""
+    username = username.strip().lower()
+    try:
+        targets = load_targets()
+        original_len = len(targets)
+        targets = [t for t in targets if t['username'].lower() != username]
+
+        if len(targets) == original_len:
+            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다")
+
+        save_targets(targets)
+        return {"success": True, "message": f"{username} 삭제됨"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"target 삭제 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/targets/{username}/favorite")
+async def toggle_favorite(username: str, _: bool = Depends(verify_page_auth)):
+    """즐겨찾기 토글"""
+    username = username.strip().lower()
+    try:
+        targets = load_targets()
+        found = False
+        new_favorite = False
+
+        for t in targets:
+            if t['username'].lower() == username:
+                t['favorite'] = not t.get('favorite', False)
+                new_favorite = t['favorite']
+                found = True
+                break
+
+        if not found:
+            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다")
+
+        save_targets(targets)
+        return {"success": True, "username": username, "favorite": new_favorite}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"즐겨찾기 토글 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/targets/reorder")
+async def reorder_targets(request: ReorderTargetsRequest, _: bool = Depends(verify_page_auth)):
+    """순서 변경"""
+    try:
+        targets = load_targets()
+        username_to_target = {t['username'].lower(): t for t in targets}
+
+        # 새 순서 적용
+        for i, username in enumerate(request.usernames):
+            username_lower = username.strip().lower()
+            if username_lower in username_to_target:
+                username_to_target[username_lower]['order'] = i
+
+        save_targets(list(username_to_target.values()))
+        return {"success": True, "message": "순서 변경됨"}
+    except Exception as e:
+        logger.error(f"순서 변경 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/login", response_model=LoginResponse)
